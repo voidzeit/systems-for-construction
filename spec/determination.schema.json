@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://systemsforconstruction.org/spec/determination.schema.json",
+  "title": "SFC Determination",
+  "type": "object",
+  "required": ["requirementId", "obligationId", "quantifier", "population", "coverage", "conforming", "determination"],
+  "properties": {
+    "requirementId": {"type": "string"},
+    "obligationId": {"type": "string"},
+    "quantifier": {"enum": ["ALL", "ANY", "NONE", "COUNT"]},
+    "population": {"type": "object", "required": ["expected", "evaluated"], "properties": {"expected": {"type": "integer", "minimum": 0}, "evaluated": {"type": "integer", "minimum": 0}}, "additionalProperties": false},
+    "coverage": {"type": "number", "minimum": 0, "maximum": 1},
+    "conforming": {"type": "integer", "minimum": 0},
+    "counterexamples": {"type": "array"},
+    "evidenceIds": {"type": "array", "items": {"type": "string"}},
+    "unknowns": {"type": "array", "items": {"type": "string"}},
+    "assumptions": {"type": "array", "items": {"type": "string"}},
+    "contradictions": {"type": "array", "items": {"type": "string"}},
+    "determination": {"enum": ["MET", "NOT_MET", "UNKNOWN", "INCOMPLETE", "STALE"]},
+    "generatedAt": {"type": "string"},
+    "ruleSetVersion": {"type": "string"}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,14 @@
+{
+  "obligationId": "OBL-PANEL-CLEARANCE-001",
+  "requirement": {
+    "requirementId": "REQ-PANEL-CLEARANCE-001",
+    "title": "Electrical panel working clearance",
+    "statement": "Every electrical panel must maintain 36 inches of working clearance.",
+    "sourceId": "synthetic-owner-requirements"
+  },
+  "quantifier": "ALL",
+  "population": {"kind": "electrical_panel"},
+  "predicate": {"property": "working_clearance_inches", "operator": ">=", "value": 36},
+  "requiredEvidence": true,
+  "ruleSetVersion": "sfc-assurance-1"
+}

@@ -1,0 +1,55 @@
+import json
+from pathlib import Path
+import unittest
+
+from sfc.assurance import evaluate_obligation
+from sfc.io import load_obligation, load_world
+from sfc.models import (
+    DeterminationStatus,
+    Obligation,
+    ProjectWorld,
+    Quantifier,
+    Requirement,
+    WorldElement,
+)
+
+
+ROOT = Path(__file__).parents[1]
+
+
+class AssuranceTests(unittest.TestCase):
+    def test_reference_example_has_one_counterexample(self) -> None:
+        obligation = load_obligation(ROOT / "examples/electrical-panel-clearance/requirement.json")
+        world = load_world(ROOT / "examples/electrical-panel-clearance/project-world.json")
+        determination = evaluate_obligation(obligation, world)
+        self.assertEqual(determination.status, DeterminationStatus.NOT_MET)
+        self.assertEqual(determination.expected_population, 18)
+        self.assertEqual(determination.evaluated_population, 18)
+        self.assertEqual(determination.conforming, 17)
+        self.assertEqual(len(determination.counterexamples), 1)
+        self.assertEqual(determination.counterexamples[0].subject, "LP-18")
+
+    def test_missing_value_is_incomplete(self) -> None:
+        obligation = Obligation(
+            obligation_id="o1",
+            requirement=Requirement("r1", "Clearance", "All panels have clearance"),
+            quantifier=Quantifier.ALL,
+            population={"kind": "panel"},
+            predicate={"property": "clearance", "operator": ">=", "value": 36},
+        )
+        world = ProjectWorld("p1", (WorldElement("P-1", "panel", {}),))
+        determination = evaluate_obligation(obligation, world)
+        self.assertEqual(determination.status, DeterminationStatus.INCOMPLETE)
+        self.assertEqual(determination.coverage, 0)
+        self.assertEqual(determination.counterexamples, ())
+
+    def test_any_none_and_count_semantics(self) -> None:
+        elements = (
+            WorldElement("A", "fixture", {"emergency": True}),
+            WorldElement("B", "fixture", {"emergency": False}),
+        )
+        world = ProjectWorld("p", elements)
+        base = dict(requirement=Requirement("r", "x", "x"), population={"kind": "fixture"}, predicate={"property": "emergency", "operator": "==", "value": True})
+        self.assertEqual(evaluate_obligation(Obligation("any", quantifier=Quantifier.ANY, **base), world).status, DeterminationStatus.MET)
+        self.assertEqual(evaluate_obligation(Obligation("none", quantifier=Quantifier.NONE, **base), world).status, DeterminationStatus.NOT_MET)
+

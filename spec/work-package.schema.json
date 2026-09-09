@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://systemsforconstruction.org/spec/work-package.schema.json",
+  "title": "SFC Work Package",
+  "type": "object",
+  "required": ["workPackageId", "title", "obligationIds", "status"],
+  "properties": {
+    "workPackageId": {"type": "string"},
+    "title": {"type": "string"},
+    "obligationIds": {"type": "array", "items": {"type": "string"}},
+    "actorId": {"type": ["string", "null"]},
+    "status": {"enum": ["planned", "in_progress", "evidence_claimed", "verified", "approved", "closed"]},
+    "evidenceIds": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

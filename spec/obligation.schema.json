@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://systemsforconstruction.org/spec/obligation.schema.json",
+  "title": "SFC Obligation",
+  "type": "object",
+  "required": ["obligationId", "requirement", "quantifier", "population", "predicate"],
+  "properties": {
+    "obligationId": {"type": "string", "minLength": 1},
+    "requirement": {"$ref": "#/$defs/requirement"},
+    "quantifier": {"enum": ["ALL", "ANY", "NONE", "COUNT"]},
+    "population": {"type": "object", "required": ["kind"], "properties": {"kind": {"type": "string"}, "where": {"type": "object"}, "assumptions": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": true},
+    "predicate": {"type": "object", "required": ["property", "operator", "value"], "properties": {"property": {"type": "string"}, "operator": {"enum": ["==", "!=", ">=", ">", "<=", "<"]}, "value": {}, "minimum": {"type": "number"}, "maximum": {"type": "number"}}, "additionalProperties": false},
+    "requiredEvidence": {"type": "boolean"},
+    "ruleSetVersion": {"type": "string"}
+  },
+  "$defs": {"requirement": {"type": "object", "required": ["requirementId", "title", "statement"], "properties": {"requirementId": {"type": "string"}, "title": {"type": "string"}, "statement": {"type": "string"}, "sourceId": {"type": ["string", "null"]}}, "additionalProperties": false}},
+  "additionalProperties": false
+}

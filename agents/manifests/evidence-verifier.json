@@ -1,0 +1,12 @@
+{
+  "agent": {
+    "id": "evidence-verifier",
+    "capabilities": {
+      "read": ["project_world", "obligations", "evidence"],
+      "propose": ["evidence_claim", "verification"],
+      "write": []
+    },
+    "limits": {"maxCostUsd": 5, "maxRuntimeSeconds": 900, "maxActions": 100},
+    "authority": {"mayPublish": false, "mayApprove": false}
+  }
+}

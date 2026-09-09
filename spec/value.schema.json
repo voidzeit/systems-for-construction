@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://systemsforconstruction.org/spec/value.schema.json",
+  "title": "SFC Value",
+  "type": "object",
+  "required": ["valueId", "status"],
+  "properties": {
+    "valueId": {"type": "string"},
+    "workPackageId": {"type": ["string", "null"]},
+    "status": {"enum": ["Unbudgeted", "Budgeted", "Committed", "Planned", "Earned", "Certified", "Billed", "Approved for Payment", "Paid", "Collected"]},
+    "amount": {"type": ["number", "null"]},
+    "currency": {"type": ["string", "null"]},
+    "evidenceIds": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}
