@@ -24,7 +24,10 @@ Determination
 Canonical Run
 ```
 
-The first executable slice is intentionally small. It evaluates a requirement against a provider-neutral `ProjectWorld`, keeps candidate evidence separate from admitted evidence, records a reproducible run, and publishes a result atomically.
+The reference runtime evaluates requirements against a provider-neutral
+`ProjectWorld`, imports common IFC STEP property sets without Autodesk, keeps
+candidate evidence separate from admitted evidence, records reproducible runs,
+and publishes results atomically.
 
 ## Quick start
 
@@ -46,8 +49,18 @@ Other commands:
 python -m sfc inspect examples/electrical-panel-clearance/project-world.json
 python -m sfc doctor
 python -m sfc support-bundle --output support-bundle.zip
+python -m sfc ifc-import model.ifc --output .sfc/project-world.json
+python -m sfc pdf-import drawings.pdf --output .sfc/drawing-world.json
+python -m sfc admit-evidence evidence.json --output .sfc/admitted-evidence.json
+python -m sfc report .sfc/canonical-run.json --format html --output report.html
+python -m sfc serve --world .sfc/project-world.json --run .sfc/canonical-run.json
 python -m sfc.mcp
 ```
+
+The local API serves the read-only Studio at `/` plus `/health`, `/project`,
+`/elements` and `/run`. The MCP gateway provides equivalent inspection tools
+for Project World, elements, relationships, evidence, requirements, runs and
+measurements.
 
 ## Repository shape
 
@@ -76,6 +89,10 @@ The core does not import FastAPI, SQLAlchemy, Autodesk SDKs, cloud SDKs or a mod
 
 ## Status
 
-SFC is alpha software. The current slice provides the deterministic contracts and runtime foundation. IFC/PDF/Revit connectors, durable service deployment and the Studio application are extension points, not hidden claims of completeness.
+SFC is alpha software. The current slice provides deterministic contracts,
+runtime, a conservative IFC STEP reader, optional PDF extraction, bounded agent
+contracts, provider adapters, a local read-only API, a Studio reference page,
+benchmarks and an MCP gateway. Production Revit coverage, durable service
+deployment and enterprise control plane features remain extension points.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md), [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/adr/](docs/adr/) for the public design record.

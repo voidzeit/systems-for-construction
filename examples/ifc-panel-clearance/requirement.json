@@ -1,0 +1,13 @@
+{
+  "obligationId": "OBL-IFC-CLEARANCE-001",
+  "requirement": {
+    "requirementId": "REQ-IFC-CLEARANCE-001",
+    "title": "IFC electrical panel working clearance",
+    "statement": "Every IFC electrical distribution board must maintain 36 inches of working clearance.",
+    "sourceId": "synthetic-ifc-requirements"
+  },
+  "quantifier": "ALL",
+  "population": {"kind": "electricdistributionboard"},
+  "predicate": {"property": "WorkingClearance", "operator": ">=", "value": 36},
+  "requiredEvidence": true
+}

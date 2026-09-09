@@ -4,6 +4,7 @@ import unittest
 
 from sfc.assurance import evaluate_obligation
 from sfc.io import load_obligation, load_world
+from sfc.ifc import load_ifc
 from sfc.models import (
     DeterminationStatus,
     Obligation,
@@ -53,3 +54,9 @@ class AssuranceTests(unittest.TestCase):
         self.assertEqual(evaluate_obligation(Obligation("any", quantifier=Quantifier.ANY, **base), world).status, DeterminationStatus.MET)
         self.assertEqual(evaluate_obligation(Obligation("none", quantifier=Quantifier.NONE, **base), world).status, DeterminationStatus.NOT_MET)
 
+    def test_ifc_properties_become_world_observations(self) -> None:
+        world = load_ifc(ROOT / "examples/ifc-panel-clearance/demo.ifc")
+        self.assertEqual(world.project_id, "SFC-DEMO-PROJECT")
+        self.assertEqual(len(world.elements), 2)
+        self.assertEqual(world.elements[0].properties["WorkingClearance"], 42)
+        self.assertEqual(world.elements[1].properties["WorkingClearance"], 29.4)

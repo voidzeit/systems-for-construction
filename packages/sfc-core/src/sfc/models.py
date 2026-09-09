@@ -142,6 +142,7 @@ class ProjectWorld:
     elements: tuple[WorldElement, ...]
     metadata: dict[str, Any] = field(default_factory=dict)
     frozen_at: str | None = None
+    relationships: tuple[dict[str, Any], ...] = ()
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "ProjectWorld":
@@ -150,6 +151,7 @@ class ProjectWorld:
             elements=tuple(WorldElement.from_dict(item) for item in value.get("elements", [])),
             metadata=dict(value.get("metadata", {})),
             frozen_at=value.get("frozenAt"),
+            relationships=tuple(value.get("relationships", [])),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -158,6 +160,7 @@ class ProjectWorld:
             "elements": [element.to_dict() for element in self.elements],
             "metadata": self.metadata,
             "frozenAt": self.frozen_at,
+            "relationships": list(self.relationships),
         }
 
     def snapshot_hash(self) -> str:
@@ -289,4 +292,3 @@ class Run:
             "createdAt": self.created_at,
             "determination": self.determination.to_dict(),
         }
-

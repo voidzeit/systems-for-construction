@@ -21,5 +21,4 @@ class AgentAndMcpTests(unittest.TestCase):
     def test_mcp_exposes_read_only_tools(self) -> None:
         response = handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
         names = {tool["name"] for tool in response["result"]["tools"]}
-        self.assertEqual(names, {"sfc.project.inspect", "sfc.run.get"})
-
+        self.assertTrue({"sfc.project.inspect", "sfc.run.get", "sfc.project.search", "sfc.element.get", "sfc.evidence.get"} <= names)

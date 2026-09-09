@@ -11,7 +11,7 @@ Revit / IFC / PDF / API
   SFC assurance runtime
 ```
 
-The core does not import Autodesk, PDF, database or cloud SDKs. Concrete
-connectors will be added under `connectors/ifc`, `connectors/pdf` and
-`connectors/revit` as separate adapters.
-
+The core does not import Autodesk, PDF, database or cloud SDKs. The reference
+package includes dependency-free STEP extraction in `sfc.ifc` and optional PDF
+text extraction in `sfc.pdf`; concrete connectors belong under
+`connectors/ifc`, `connectors/pdf` and `connectors/revit` as separate adapters.

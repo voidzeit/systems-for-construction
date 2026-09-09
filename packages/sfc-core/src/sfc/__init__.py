@@ -14,6 +14,8 @@ from .models import (
 )
 from .proofs import Proof
 from .governance import Review, ReviewDecision, ValueRecord, current_review
+from .ifc import load_ifc, parse_ifc_text
+from .events import Event, EventLog
 
 __all__ = [
     "Counterexample",
@@ -21,6 +23,8 @@ __all__ = [
     "Evidence",
     "EvidenceAdmissionError",
     "EvidenceAuthority",
+    "Event",
+    "EventLog",
     "Obligation",
     "ProjectWorld",
     "Proof",
@@ -31,5 +35,7 @@ __all__ = [
     "ValueRecord",
     "WorldElement",
     "current_review",
+    "load_ifc",
+    "parse_ifc_text",
     "evaluate_obligation",
 ]

@@ -15,3 +15,5 @@ python -m sfc verify examples/electrical-panel-clearance/requirement.json exampl
 
 The data is synthetic and contains no customer project information.
 
+The fixture also serves as the first `sfc bench` input. When no truth file is
+present, benchmark metrics remain `not_scored_without_fixture_truth`.
