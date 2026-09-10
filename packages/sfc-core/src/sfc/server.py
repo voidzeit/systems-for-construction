@@ -6,6 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 import json
+import os
 
 from .io import load_world, read_json
 from .events import EventLog
@@ -14,11 +15,29 @@ from .readiness import compute_readiness
 from .models import Determination, Evidence
 
 
+#: Environment override for the Studio document.
+STUDIO_VARIABLE = "SFC_STUDIO_PATH"
+
+#: Repository checkout location, relative to this module rather than the
+#: working directory, so serving does not depend on where the process started.
+_REPOSITORY_STUDIO = Path(__file__).resolve().parents[4] / "apps" / "studio" / "index.html"
+
+
+def studio_path(explicit: str | Path | None = None) -> Path | None:
+    """Locate the Studio document, or None when this install does not carry one."""
+    candidates = [explicit, os.environ.get(STUDIO_VARIABLE), _REPOSITORY_STUDIO]
+    for candidate in candidates:
+        if candidate and Path(candidate).is_file():
+            return Path(candidate)
+    return None
+
+
 class SfcRequestHandler(BaseHTTPRequestHandler):
     world_path: Path | None = None
     run_path: Path | None = None
     evidence_path: Path | None = None
     event_path: Path | None = None
+    studio: Path | None = None
 
     def _send(self, status: int, payload: object) -> None:
         body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
@@ -40,11 +59,15 @@ class SfcRequestHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         try:
             if parsed.path == "/":
-                studio = Path("apps/studio/index.html")
-                if studio.exists():
+                studio = self.studio or studio_path()
+                if studio is not None:
                     self._send_html(200, studio.read_text(encoding="utf-8"))
                 else:
-                    self._send(404, {"error": "studio file not found"})
+                    self._send(404, {
+                        "error": "studio document not found",
+                        "hint": f"pass --studio, or set {STUDIO_VARIABLE}; the JSON endpoints are unaffected",
+                        "endpoints": ["/health", "/project", "/elements", "/run", "/readiness", "/activity", "/tasks"],
+                    })
             elif parsed.path == "/health":
                 self._send(200, {"status": "ok"})
             elif parsed.path == "/project":
@@ -105,8 +128,8 @@ class SfcRequestHandler(BaseHTTPRequestHandler):
         return
 
 
-def serve(world_path: str | Path | None = None, run_path: str | Path | None = None, host: str = "127.0.0.1", port: int = 8787, *, evidence_path: str | Path | None = None, event_path: str | Path | None = None) -> None:
-    handler = type("ConfiguredSfcHandler", (SfcRequestHandler,), {"world_path": Path(world_path) if world_path else None, "run_path": Path(run_path) if run_path else None, "evidence_path": Path(evidence_path) if evidence_path else None, "event_path": Path(event_path) if event_path else None})
+def serve(world_path: str | Path | None = None, run_path: str | Path | None = None, host: str = "127.0.0.1", port: int = 8787, *, evidence_path: str | Path | None = None, event_path: str | Path | None = None, studio: str | Path | None = None) -> None:
+    handler = type("ConfiguredSfcHandler", (SfcRequestHandler,), {"world_path": Path(world_path) if world_path else None, "run_path": Path(run_path) if run_path else None, "evidence_path": Path(evidence_path) if evidence_path else None, "event_path": Path(event_path) if event_path else None, "studio": studio_path(studio)})
     server = ThreadingHTTPServer((host, port), handler)
     print(f"SFC server listening on http://{host}:{port}")
     server.serve_forever()

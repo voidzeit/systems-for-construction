@@ -35,7 +35,7 @@ results atomically.
 The CLI uses only the Python standard library for the core workflow.
 
 ```bash
-python -m pip install -e .
+python -m pip install -e ".[dev]"   # or: pip install -e .  for the stdlib-only runtime
 python -m sfc verify \
   examples/electrical-panel-clearance/requirement.json \
   examples/electrical-panel-clearance/project-world.json \

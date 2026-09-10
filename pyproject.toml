@@ -41,3 +41,7 @@ where = ["packages/sfc-core/src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The tests import sfc directly, so pytest must find the package whether or not
+# it has been installed. Without this, a clean clone fails collection with
+# "No module named 'sfc'" while unittest after pip install -e . succeeds.
+pythonpath = ["packages/sfc-core/src"]

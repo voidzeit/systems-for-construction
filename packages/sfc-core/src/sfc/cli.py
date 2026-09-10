@@ -48,8 +48,22 @@ def _vocabulary(args: argparse.Namespace) -> Vocabulary:
     return default_vocabulary()
 
 
+EXIT_CODES = """exit codes:
+  0  the command succeeded; for a determination, the requirement closed
+     (MET, NOT_MET or NOT_APPLICABLE)
+  1  the command ran but the requirement did not close (INCOMPLETE, UNKNOWN,
+     STALE), or evidence was rejected
+  2  usage error, unreadable input, or an obligation that cannot be evaluated
+"""
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="sfc", description="Systems for Construction CLI")
+    parser = argparse.ArgumentParser(
+        prog="sfc",
+        description="Systems for Construction CLI",
+        epilog=EXIT_CODES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     verify = sub.add_parser("verify", help="evaluate an obligation against a Project World")
@@ -115,6 +129,7 @@ def build_parser() -> argparse.ArgumentParser:
     server.add_argument("--events", type=Path)
     server.add_argument("--host", default="127.0.0.1")
     server.add_argument("--port", type=int, default=8787)
+    server.add_argument("--studio", type=Path, help="Studio HTML document; defaults to the repository copy or SFC_STUDIO_PATH")
 
     gateway = sub.add_parser("gateway", help="serve the local SFC AI Gateway")
     gateway.add_argument("--host", default="127.0.0.1")
@@ -125,6 +140,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    try:
+        return _dispatch(args)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        # A missing file or an unevaluable obligation is a usage problem, not a
+        # crash. The traceback is noise to someone running a command.
+        print(f"sfc: {type(error).__name__}: {error}", file=sys.stderr)
+        return 2
+
+
+def _dispatch(args: argparse.Namespace) -> int:
     if args.command == "verify":
         return _verify(args)
     if args.command == "inspect":
@@ -150,7 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "vocabulary":
         return _vocabulary_command(args)
     if args.command == "serve":
-        serve(args.world, args.run, args.host, args.port, evidence_path=args.evidence, event_path=args.events)
+        serve(args.world, args.run, args.host, args.port, evidence_path=args.evidence, event_path=args.events, studio=args.studio)
         return 0
     if args.command == "gateway":
         serve_gateway(host=args.host, port=args.port, ledger_path=args.ledger)
