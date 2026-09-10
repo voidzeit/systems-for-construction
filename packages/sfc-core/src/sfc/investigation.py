@@ -16,6 +16,7 @@ from .proofs import Proof
 from .requirements import compile_requirement
 from .runtime import RunStore, create_run
 from .providers import EngineeringProvider
+from .vocabulary import Vocabulary, default_vocabulary
 
 
 class ReferenceInvestigationProvider:
@@ -52,7 +53,7 @@ class InvestigationPublication:
     run: Run
 
 
-def _tools_for(world: ProjectWorld, property_name: str) -> dict[str, RegisteredTool]:
+def _tools_for(world: ProjectWorld, property_name: str, vocabulary: Vocabulary) -> dict[str, RegisteredTool]:
     def search(arguments):
         query = str(arguments.get("query", "")).lower()
         matches = [element.to_dict() for element in world.elements if not query or query in json.dumps(element.to_dict(), ensure_ascii=False).lower()]
@@ -70,7 +71,7 @@ def _tools_for(world: ProjectWorld, property_name: str) -> dict[str, RegisteredT
         if element is None:
             return ToolObservation("geometry.measure", {"error": "element not found"})
         requested = arguments.get("property")
-        resolved = resolve_property(element, requested)
+        resolved = resolve_property(element, requested, vocabulary)
         value = resolved[1] if resolved else element.geometry.get(requested)
         evidence = tuple(element.evidence_by_property.get(resolved[0] if resolved else requested, ()))
         return ToolObservation("geometry.measure", {"elementId": element.element_id, "property": arguments.get("property"), "value": value}, evidence)
@@ -82,16 +83,17 @@ def _tools_for(world: ProjectWorld, property_name: str) -> dict[str, RegisteredT
     }
 
 
-def investigate_and_publish(world: ProjectWorld, statement: str, *, store: RunStore | None = None, requirement_id: str = "REQ-COMPILED-001", provider: EngineeringProvider | None = None) -> InvestigationPublication:
-    obligation = compile_requirement(statement, requirement_id=requirement_id)
+def investigate_and_publish(world: ProjectWorld, statement: str, *, store: RunStore | None = None, requirement_id: str = "REQ-COMPILED-001", provider: EngineeringProvider | None = None, vocabulary: Vocabulary | None = None) -> InvestigationPublication:
+    vocabulary = vocabulary if vocabulary is not None else default_vocabulary()
+    obligation = compile_requirement(statement, requirement_id=requirement_id, vocabulary=vocabulary)
     policy = AgentPolicy.from_dict({"agent": {"id": "sfc-reference-engineer", "capabilities": {"read": ["project_world"], "propose": ["evidence_claim", "verification"], "write": []}, "limits": {"maxActions": 8, "maxRuntimeSeconds": 60}, "authority": {"mayPublish": False, "mayApprove": False}}})
     selected_provider = provider or ReferenceInvestigationProvider(obligation.predicate["property"])
-    agent = AgentRuntime(policy, selected_provider, _tools_for(world, obligation.predicate["property"])).investigate(statement)
-    determination = evaluate_obligation(obligation, world)
+    agent = AgentRuntime(policy, selected_provider, _tools_for(world, obligation.predicate["property"], vocabulary)).investigate(statement)
+    determination = evaluate_obligation(obligation, world, vocabulary=vocabulary)
     authority = EvidenceAuthority()
     admitted = []
     for element in world.elements:
-        resolved = resolve_property(element, obligation.predicate["property"])
+        resolved = resolve_property(element, obligation.predicate["property"], vocabulary)
         if resolved is None:
             continue
         actual_property, actual_value = resolved

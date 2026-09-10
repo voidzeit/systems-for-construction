@@ -1,6 +1,7 @@
 """Provider-neutral contracts and deterministic runtime for SFC."""
 
-from .assurance import AssuranceError, MeasurementPolicy, evaluate_obligation, observe_measurement, validate_determination
+from .assurance import AssuranceError, MeasurementPolicy, evaluate_obligation, observe_measurement, validate_determination, validate_obligation
+from .vocabulary import Term, Vocabulary, default_vocabulary
 from .quantities import (
     Conversion,
     Dimension,
@@ -57,6 +58,10 @@ __all__ = [
     "EvidenceAdmissionError",
     "EvidenceAuthority",
     "AssuranceError",
+    "Term",
+    "Vocabulary",
+    "default_vocabulary",
+    "validate_obligation",
     "Conversion",
     "Dimension",
     "IncompatibleDimensionError",

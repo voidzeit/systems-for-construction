@@ -8,13 +8,14 @@ import json
 
 from .assurance import evaluate_obligation
 from .io import load_obligation, load_world
+from .vocabulary import Vocabulary, default_vocabulary
 
 
-def run_benchmark(root: str | Path) -> dict[str, Any]:
+def run_benchmark(root: str | Path, *, vocabulary: Vocabulary | None = None) -> dict[str, Any]:
     root_path = Path(root)
     obligation = load_obligation(root_path / "requirement.json")
     world = load_world(root_path / "project-world.json")
-    determination = evaluate_obligation(obligation, world)
+    determination = evaluate_obligation(obligation, world, vocabulary=vocabulary if vocabulary is not None else default_vocabulary())
     result: dict[str, Any] = {
         "fixture": root_path.name,
         "status": determination.status.value,

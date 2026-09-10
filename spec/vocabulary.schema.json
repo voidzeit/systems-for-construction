@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://systemsforconstruction.org/spec/vocabulary.schema.json",
+  "title": "SFC Vocabulary Pack",
+  "description": "A declared set of discipline terms. The assurance kernel holds no domain vocabulary; adapters inject a pack so that every alias a determination relies on is data a reviewer can read.",
+  "type": "object",
+  "required": [
+    "vocabularyId",
+    "version"
+  ],
+  "properties": {
+    "vocabularyId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "kinds": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/term"
+      }
+    },
+    "properties": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/term"
+      }
+    }
+  },
+  "$defs": {
+    "term": {
+      "type": "object",
+      "required": [
+        "canonical"
+      ],
+      "properties": {
+        "canonical": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "dimension": {
+          "enum": [
+            "length",
+            "area",
+            "volume",
+            "angle",
+            "mass",
+            "time"
+          ],
+          "description": "Declared dimension of a property, used to reject an obligation whose predicate unit measures something else."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

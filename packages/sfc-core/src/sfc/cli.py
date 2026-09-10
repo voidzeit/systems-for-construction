@@ -23,6 +23,29 @@ from .investigation import investigate_and_publish
 from .http_providers import provider_from_environment
 from .gateway import serve_gateway
 from .readiness import compute_readiness
+from .vocabulary import Vocabulary, default_vocabulary
+
+
+def _add_vocabulary_option(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--vocabulary",
+        type=Path,
+        help="vocabulary pack file or directory; defaults to the bundled AEC pack, "
+             "or SFC_VOCABULARY_PATH when set. Pass --no-vocabulary for the bare kernel.",
+    )
+    parser.add_argument(
+        "--no-vocabulary",
+        action="store_true",
+        help="evaluate with no domain vocabulary, matching terms by spelling only",
+    )
+
+
+def _vocabulary(args: argparse.Namespace) -> Vocabulary:
+    if getattr(args, "no_vocabulary", False):
+        return Vocabulary.empty()
+    if getattr(args, "vocabulary", None):
+        return Vocabulary.load(args.vocabulary)
+    return default_vocabulary()
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -34,6 +57,7 @@ def build_parser() -> argparse.ArgumentParser:
     verify.add_argument("project_world", type=Path)
     verify.add_argument("--output", type=Path, default=Path(".sfc/last-run.json"))
     verify.add_argument("--store", type=Path, default=Path(".sfc"))
+    _add_vocabulary_option(verify)
 
     inspect = sub.add_parser("inspect", help="inspect a Project World")
     inspect.add_argument("project_world", type=Path)
@@ -64,10 +88,15 @@ def build_parser() -> argparse.ArgumentParser:
     investigate.add_argument("--output", type=Path, default=Path(".sfc/investigation.json"))
     investigate.add_argument("--store", type=Path, default=Path(".sfc"))
     investigate.add_argument("--provider", choices=["reference", "environment"], default="reference", help="provider mode; environment reads SFC_PROVIDER and its credentials")
+    _add_vocabulary_option(investigate)
 
     bench = sub.add_parser("bench", help="run a deterministic synthetic benchmark fixture")
     bench.add_argument("fixture", type=Path)
     bench.add_argument("--output", type=Path)
+    _add_vocabulary_option(bench)
+
+    vocabulary = sub.add_parser("vocabulary", help="show the vocabulary a determination would use")
+    _add_vocabulary_option(vocabulary)
 
     report = sub.add_parser("report", help="render a run as JSON, CSV or HTML")
     report.add_argument("run", type=Path)
@@ -118,6 +147,8 @@ def main(argv: list[str] | None = None) -> int:
         return _report(args)
     if args.command == "readiness":
         return _readiness(args)
+    if args.command == "vocabulary":
+        return _vocabulary_command(args)
     if args.command == "serve":
         serve(args.world, args.run, args.host, args.port, evidence_path=args.evidence, event_path=args.events)
         return 0
@@ -132,7 +163,7 @@ def _verify(args: argparse.Namespace) -> int:
     world = load_world(args.project_world)
     store = RunStore(args.store)
     frozen = store.freeze(world, obligation)
-    determination = evaluate_obligation(obligation, world)
+    determination = evaluate_obligation(obligation, world, vocabulary=_vocabulary(args))
     run = create_run(world, frozen, determination)
     path = store.publish(run)
     output = run.to_dict()
@@ -197,7 +228,7 @@ def _admit_evidence(args: argparse.Namespace) -> int:
 def _investigate(args: argparse.Namespace) -> int:
     world = load_ifc(args.source) if args.source.suffix.lower() == ".ifc" else load_world(args.source)
     provider = provider_from_environment() if args.provider == "environment" else None
-    publication = investigate_and_publish(world, args.statement, store=RunStore(args.store), provider=provider)
+    publication = investigate_and_publish(world, args.statement, store=RunStore(args.store), provider=provider, vocabulary=_vocabulary(args))
     result = {
         "agent": {"agentId": publication.agent.agent_id, "actions": publication.agent.actions, "terminalReason": publication.agent.terminal_reason, "findings": [{"statement": finding.statement, "evidenceIds": list(finding.evidence_ids)} for finding in publication.agent.findings]},
         "admittedEvidence": [item.to_dict() for item in publication.admitted_evidence],
@@ -210,11 +241,17 @@ def _investigate(args: argparse.Namespace) -> int:
 
 
 def _bench(args: argparse.Namespace) -> int:
-    result = run_benchmark(args.fixture)
+    result = run_benchmark(args.fixture, vocabulary=_vocabulary(args))
     if args.output:
         write_json(args.output, result)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result["metrics"].get("accuracy", 1.0) in {1.0, "not_scored_without_fixture_truth"} else 1
+
+
+def _vocabulary_command(args: argparse.Namespace) -> int:
+    vocabulary = _vocabulary(args)
+    print(json.dumps(vocabulary.to_dict(), ensure_ascii=False, indent=2))
+    return 0
 
 
 def _report(args: argparse.Namespace) -> int:

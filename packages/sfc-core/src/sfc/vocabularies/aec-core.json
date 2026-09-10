@@ -1,0 +1,34 @@
+{
+  "vocabularyId": "sfc.vocabulary.aec-core",
+  "version": "1",
+  "title": "AEC core vocabulary",
+  "description": "Discipline terms the assurance kernel deliberately does not know. Each entry declares one canonical term and the spellings a connector, a schedule or a requirement author may produce for it.",
+  "kinds": [
+    {
+      "canonical": "electrical_distribution_board",
+      "aliases": [
+        "electrical_panel",
+        "electrical_panels",
+        "electric_panel",
+        "panelboard",
+        "distribution_board",
+        "electric_distribution_board",
+        "electricdistributionboard",
+        "IfcElectricDistributionBoard"
+      ]
+    }
+  ],
+  "properties": [
+    {
+      "canonical": "working_clearance",
+      "dimension": "length",
+      "aliases": [
+        "WorkingClearance",
+        "Working Clearance",
+        "workingClearance",
+        "working_clearance_inches",
+        "working_clearance_mm"
+      ]
+    }
+  ]
+}

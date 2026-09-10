@@ -1,4 +1,10 @@
-"""Deterministic compiler for a small, explicit natural-language subset."""
+"""Compiler for a controlled requirement language.
+
+This is not a general natural-language compiler. It accepts a small, explicit
+set of sentence forms and refuses everything else, so a requirement is never
+turned into an obligation by interpretation. Widening the accepted input is a
+deliberate change to the grammar, not a model choice at runtime.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +13,7 @@ import re
 
 from .models import Obligation, Quantifier, Requirement
 from .quantities import UnknownUnitError, resolve_unit
+from .vocabulary import Vocabulary, normalize
 
 
 class RequirementCompilationError(ValueError):
@@ -19,31 +26,44 @@ PATTERNS = (
 )
 
 
-def _kind(subject: str) -> str:
-    normalized = re.sub(r"[^a-z0-9]+", "_", subject.lower()).strip("_")
-    aliases = {
-        "electrical_panel": "electrical_panel",
-        "electrical_panels": "electrical_panel",
-        "electric_panel": "electrical_panel",
-        "electric_distribution_board": "electricdistributionboard",
-        "electric_distribution_boards": "electricdistributionboard",
-    }
-    return aliases.get(normalized, normalized.rstrip("s"))
+def _slug(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
 
 
-def _property(name: str) -> str:
-    normalized = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
-    return normalized
+def _kind(subject: str, vocabulary: Vocabulary) -> str:
+    """Resolve the subject to a canonical kind, falling back to its own slug.
+
+    Plural handling is grammar, not domain knowledge, so it stays here. Which
+    spellings denote the same equipment is a domain claim and lives in the pack.
+    """
+    for candidate in (_slug(subject), _slug(subject).removesuffix("s")):
+        resolved = vocabulary.resolve_kind(candidate)
+        if resolved != normalize(candidate):
+            return resolved
+    return _slug(subject).removesuffix("s")
 
 
-def compile_requirement(statement: str, *, requirement_id: str = "REQ-COMPILED-001", title: str | None = None) -> Obligation:
+def _property(name: str, vocabulary: Vocabulary) -> str:
+    slug = _slug(name)
+    resolved = vocabulary.resolve_property(slug)
+    return resolved if resolved != normalize(slug) else slug
+
+
+def compile_requirement(
+    statement: str,
+    *,
+    requirement_id: str = "REQ-COMPILED-001",
+    title: str | None = None,
+    vocabulary: Vocabulary | None = None,
+) -> Obligation:
+    vocabulary = vocabulary or Vocabulary.empty()
     text = " ".join(statement.strip().split())
     match = next((pattern.match(text.rstrip(".")) for pattern in PATTERNS if pattern.match(text.rstrip("."))), None)
     if not match:
         raise RequirementCompilationError("unsupported requirement; use 'Every <subject> must maintain <number> inches of <property>' or an explicit comparison")
     groups = match.groupdict()
-    subject = _kind(groups["subject"])
-    property_name = _property(groups["property"])
+    subject = _kind(groups["subject"], vocabulary)
+    property_name = _property(groups["property"], vocabulary)
     value = float(groups["value"])
     if value.is_integer():
         value = int(value)

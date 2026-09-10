@@ -5,17 +5,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from operator import eq, ge, gt, le, lt, ne
 from typing import Any, Callable
-import re
 
 from .quantities import (
     Conversion,
     MeasurementError,
+    dimension_of,
     Quantity,
     DEFAULT_RELATIVE_TOLERANCE,
     compare_values,
     normalize_for_comparison,
     resolve_unit,
 )
+from .vocabulary import Vocabulary
 from .models import (
     CLOSING_STATUSES,
     Counterexample,
@@ -74,13 +75,8 @@ def validate_determination(determination: Determination) -> None:
         raise AssuranceError("ALL/NOT_MET requires a counterexample")
 
 
-def _matches_population(element: Any, spec: PopulationSpec) -> bool:
-    aliases = {
-        "electrical_panel": {"electrical_panel", "electricdistributionboard", "electrical_distribution_board"},
-        "electricdistributionboard": {"electrical_panel", "electricdistributionboard", "electrical_distribution_board"},
-        "electrical_distribution_board": {"electrical_panel", "electricdistributionboard", "electrical_distribution_board"},
-    }
-    if spec.kind and element.kind not in aliases.get(spec.kind, {spec.kind}):
+def _matches_population(element: Any, spec: PopulationSpec, vocabulary: Vocabulary) -> bool:
+    if spec.kind and vocabulary.resolve_kind(spec.kind) != vocabulary.resolve_kind(element.kind):
         return False
     for key, expected in spec.where.items():
         if element.properties.get(key) != expected:
@@ -88,16 +84,21 @@ def _matches_population(element: Any, spec: PopulationSpec) -> bool:
     return True
 
 
-def resolve_property(element: Any, requested: str) -> tuple[str, Any] | None:
+def resolve_property(element: Any, requested: str, vocabulary: Vocabulary | None = None) -> tuple[str, Any] | None:
+    """Find the observation an obligation is asking about.
+
+    Punctuation and case are syntactic noise, so a name written in camel case
+    resolves the same name written in snake case with no vocabulary at all.
+    Anything beyond spelling - that a schedule column and a model property name
+    denote the same measurement - is a domain assertion, and comes from the
+    injected pack.
+    """
     if requested in element.properties:
         return requested, element.properties[requested]
-    # Punctuation and case are syntactic noise, so WorkingClearance still
-    # resolves working_clearance. A unit suffix is not noise: it is a claim
-    # about the measurement, and it belongs to the value.
-    normalize = lambda value: re.sub(r"[^a-z0-9]", "", value.lower())
-    wanted = normalize(requested)
+    vocabulary = vocabulary or Vocabulary.empty()
+    wanted = vocabulary.resolve_property(requested)
     for name, value in element.properties.items():
-        if normalize(name) == wanted:
+        if vocabulary.resolve_property(name) == wanted:
             return name, value
     return None
 
@@ -179,6 +180,27 @@ def _check_predicate(
     )
 
 
+def validate_obligation(obligation: Obligation, vocabulary: Vocabulary | None = None) -> None:
+    """Reject an obligation that cannot be evaluated as written.
+
+    A predicate unit that measures something other than the vocabulary's
+    declared dimension for that property is an authoring error. Reporting it as
+    a finding about the project would blame the model for a mistake in the
+    requirement.
+    """
+    vocabulary = vocabulary or Vocabulary.empty()
+    declared = vocabulary.declared_dimension(obligation.predicate.get("property"))
+    unit = resolve_unit(obligation.predicate.get("unit"))
+    if declared is None or unit is None:
+        return
+    actual = dimension_of(unit).value
+    if actual != declared:
+        raise AssuranceError(
+            f"predicate unit {unit!r} measures {actual}, but the vocabulary declares "
+            f"{obligation.predicate.get('property')!r} as {declared}"
+        )
+
+
 def _empty_population_determination(obligation: Obligation, spec: PopulationSpec) -> Determination:
     """An empty population may close only when non-applicability is itself evidenced.
 
@@ -217,9 +239,16 @@ def _empty_population_determination(obligation: Obligation, spec: PopulationSpec
     )
 
 
-def evaluate_obligation(obligation: Obligation, world: ProjectWorld) -> Determination:
+def evaluate_obligation(obligation: Obligation, world: ProjectWorld, *, vocabulary: Vocabulary | None = None) -> Determination:
+    """Evaluate one obligation against one snapshot.
+
+    ``vocabulary`` is empty by default: the kernel resolves spellings but makes
+    no domain claims. Adapters inject a pack.
+    """
+    vocabulary = vocabulary or Vocabulary.empty()
+    validate_obligation(obligation, vocabulary)
     spec = PopulationSpec.from_dict(obligation.population)
-    population = [element for element in world.elements if _matches_population(element, spec)]
+    population = [element for element in world.elements if _matches_population(element, spec, vocabulary)]
     if not population:
         return _empty_population_determination(obligation, spec)
 
@@ -235,7 +264,7 @@ def evaluate_obligation(obligation: Obligation, world: ProjectWorld) -> Determin
     counterexamples: list[Counterexample] = []
 
     for element in population:
-        resolved = resolve_property(element, property_name)
+        resolved = resolve_property(element, property_name, vocabulary)
         if resolved is None or resolved[1] is None:
             unknowns.append(element.element_id)
             if DeterminationReason.MISSING_OBSERVATION.value not in reasons:

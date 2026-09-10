@@ -206,6 +206,32 @@ class ControlPlaneConformanceTests(unittest.TestCase):
         schemas.assert_valid(self, "event.schema.json", event.to_dict())
 
 
+class VocabularyConformanceTests(unittest.TestCase):
+    def setUp(self) -> None:
+        schemas.requires_schemas(self)
+
+    def test_every_bundled_pack_conforms(self) -> None:
+        from sfc.vocabulary import BUNDLED, Vocabulary
+
+        packs = sorted(BUNDLED.glob("*.json"))
+        self.assertTrue(packs, "no bundled vocabulary packs found")
+        for path in packs:
+            with self.subTest(pack=path.name):
+                document = json.loads(path.read_text(encoding="utf-8"))
+                schemas.assert_valid(self, "vocabulary.schema.json", document)
+                # The loader must not silently drop a declared term.
+                loaded = Vocabulary.from_dict(document)
+                self.assertEqual(
+                    {term["canonical"] for term in document.get("kinds", [])},
+                    {term.canonical for term in loaded.kinds},
+                )
+
+    def test_a_pack_declaring_an_unknown_dimension_is_rejected(self) -> None:
+        pack = {"vocabularyId": "bad", "version": "1",
+                "properties": [{"canonical": "pressure", "dimension": "pressure"}]}
+        self.assertFalse(schemas.validator("vocabulary.schema.json").is_valid(pack))
+
+
 class FixtureDirectionTests(unittest.TestCase):
     """Schema fixture -> python object -> JSON -> schema, the other direction."""
 
