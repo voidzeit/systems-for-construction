@@ -1,5 +1,15 @@
 """Provider-neutral contracts and deterministic runtime for SFC."""
 
+from importlib.metadata import PackageNotFoundError, version as _installed_version
+
+#: Read from package metadata so pyproject.toml is the only place a version is
+#: written. Every surface that reports one - the CLI, the MCP server, an HTTP
+#: response - reads this, so they cannot drift apart.
+try:
+    __version__ = _installed_version("systems-for-construction")
+except PackageNotFoundError:  # running from a source tree without an install
+    __version__ = "0.0.0.dev0"
+
 from .assurance import AssuranceError, MeasurementPolicy, evaluate_obligation, observe_measurement, validate_determination, validate_obligation
 from .vocabulary import Term, Vocabulary, default_vocabulary
 from .quantities import (
@@ -45,6 +55,7 @@ from .reality import RealityComparison, RealityObservation, compare_position
 from .activity import ActionTask, activity_feed, derive_tasks
 
 __all__ = [
+    "__version__",
     "CLOSING_STATUSES",
     "Applicability",
     "Counterexample",

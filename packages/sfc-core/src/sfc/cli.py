@@ -8,6 +8,7 @@ from pathlib import Path
 import platform
 import sys
 
+from . import __version__
 from .assurance import evaluate_obligation
 from .io import load_obligation, load_world, read_json, write_json
 from .models import CLOSING_STATUSES, Determination, Evidence
@@ -78,6 +79,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor = sub.add_parser("doctor", help="check the local SFC runtime")
     doctor.add_argument("--store", type=Path, default=Path(".sfc"))
+    _add_vocabulary_option(doctor)
+
+    parser.add_argument("--version", action="version", version=f"sfc {__version__}")
 
     bundle = sub.add_parser("support-bundle", help="create a redacted diagnostic bundle")
     bundle.add_argument("--output", type=Path, default=Path("support-bundle.zip"))
@@ -209,7 +213,15 @@ def _inspect(args: argparse.Namespace) -> int:
 
 def _doctor(args: argparse.Namespace) -> int:
     store = RunStore(args.store)
-    print(json.dumps({"status": "ok", "python": sys.version.split()[0], "platform": platform.platform(), "store": str(store.root), "canonicalRun": store.load_canonical() is not None}, indent=2))
+    print(json.dumps({
+        "status": "ok",
+        "version": __version__,
+        "python": sys.version.split()[0],
+        "platform": platform.platform(),
+        "store": str(store.root),
+        "canonicalRun": store.load_canonical() is not None,
+        "vocabulary": _vocabulary(args).vocabulary_id,
+    }, indent=2))
     return 0
 
 

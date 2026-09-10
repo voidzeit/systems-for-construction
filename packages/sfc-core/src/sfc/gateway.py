@@ -19,6 +19,7 @@ import secrets
 import time
 import uuid
 
+from . import __version__
 from .http_providers import ProviderError, provider_from_environment
 from .providers import EngineeringProvider, ProviderRequest, ProviderResponse
 from .telemetry import UsageLedger
@@ -448,7 +449,7 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
             return
         path = self.path.split("?", 1)[0]
         if path in {"/v1/health", "/health"}:
-            self._send(200, {"status": "ok", "gateway": "sfc"})
+            self._send(200, {"status": "ok", "gateway": "sfc", "version": __version__})
         elif path == "/v1/models":
             self._send(200, {"object": "list", "data": self.gateway.registry.models()})
         elif path == "/v1/providers":

@@ -46,7 +46,7 @@ class OpenAICompatibleProvider:
 class AnthropicProvider:
     api_key: str
     base_url: str = "https://api.anthropic.com"
-    default_model: str = "claude-3-5-sonnet-latest"
+    default_model: str = "claude-sonnet-5"
 
     def complete(self, request: ProviderRequest) -> ProviderResponse:
         model = request.model or self.default_model
@@ -91,7 +91,7 @@ def provider_from_environment() -> OpenAICompatibleProvider | AnthropicProvider 
         key = os.environ.get("ANTHROPIC_API_KEY")
         if not key:
             raise ProviderError("ANTHROPIC_API_KEY is required for SFC_PROVIDER=anthropic")
-        return AnthropicProvider(key, default_model=os.environ.get("SFC_MODEL", "claude-3-5-sonnet-latest"))
+        return AnthropicProvider(key, default_model=os.environ.get("SFC_MODEL", "claude-sonnet-5"))
     if provider == "gemini":
         key = os.environ.get("GEMINI_API_KEY")
         if not key:

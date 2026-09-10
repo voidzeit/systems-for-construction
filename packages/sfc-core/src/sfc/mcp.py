@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from . import __version__
 from .io import load_world, read_json
 
 
@@ -71,7 +72,7 @@ def handle(request: dict[str, Any]) -> dict[str, Any] | None:
     method = request.get("method")
     identifier = request.get("id")
     if method == "initialize":
-        value = {"protocolVersion": "2025-06-18", "serverInfo": {"name": "sfc-mcp", "version": "0.1.0a4"}, "capabilities": {"tools": {}}}
+        value = {"protocolVersion": "2025-06-18", "serverInfo": {"name": "sfc-mcp", "version": __version__}, "capabilities": {"tools": {}}}
         return {"jsonrpc": "2.0", "id": identifier, "result": value}
     if method == "notifications/initialized":
         return None

@@ -8,6 +8,7 @@ from urllib.parse import parse_qs, urlparse
 import json
 import os
 
+from . import __version__
 from .io import load_world, read_json
 from .events import EventLog
 from .activity import activity_feed, derive_tasks
@@ -69,7 +70,7 @@ class SfcRequestHandler(BaseHTTPRequestHandler):
                         "endpoints": ["/health", "/project", "/elements", "/run", "/readiness", "/activity", "/tasks"],
                     })
             elif parsed.path == "/health":
-                self._send(200, {"status": "ok"})
+                self._send(200, {"status": "ok", "version": __version__})
             elif parsed.path == "/project":
                 world = load_world(self.world_path) if self.world_path else None
                 self._send(200, world.to_dict() if world else {"projectId": None, "elements": []})

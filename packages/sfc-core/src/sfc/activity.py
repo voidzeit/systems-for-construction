@@ -19,8 +19,35 @@ class ActionTask:
         return {"taskId": self.task_id, "title": self.title, "targetId": self.target_id, "kind": self.kind, "status": self.status, "sourceEventId": self.source_event_id}
 
 
+#: Human-readable labels for the event types the control plane emits. An event
+#: type with no entry keeps its own name rather than being relabelled or hidden.
+EVENT_LABELS = {
+    "obligation.discovered": "Obligation discovered",
+    "obligation.transitioned": "Obligation advanced",
+    "work_package.created": "Work package created",
+    "work_package.transitioned": "Work package advanced",
+    "review.added": "Review recorded",
+    "value.created": "Value recorded",
+    "value.transitioned": "Value advanced",
+    "evidence.added": "Evidence added",
+    "evidence.transitioned": "Evidence advanced",
+    "determination.produced": "Determination produced",
+}
+
+
 def activity_feed(events: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    return list(events)
+    """Order the append-only log newest first and label each entry.
+
+    This is a projection over the log, not a replacement for it: nothing is
+    dropped, merged or rewritten, and an unrecognized event type keeps its own
+    name so a new event is visible before its label exists.
+    """
+    projected = [
+        {**event, "label": EVENT_LABELS.get(str(event.get("eventType", "")), str(event.get("eventType", "")))}
+        for event in events
+    ]
+    # A stable sort keeps append order for events sharing a timestamp.
+    return sorted(projected, key=lambda event: str(event.get("occurredAt", "")), reverse=True)
 
 
 def derive_tasks(events: Iterable[dict[str, Any]]) -> list[ActionTask]:
