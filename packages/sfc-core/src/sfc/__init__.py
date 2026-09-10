@@ -38,7 +38,7 @@ from .agent_runtime import AgentRuntime, CandidateFinding, InvestigationResult, 
 from .providers import ProviderRequest, ProviderResponse, ToolCall
 from .requirements import RequirementCompilationError, compile_requirement
 from .investigation import InvestigationPublication, ReferenceInvestigationProvider, investigate_and_publish
-from .gateway import GatewayError, GatewayPolicy, GatewayRoute, ProviderGateway, ProviderRegistry, ProviderRouter, ReferenceEmbeddingProvider, ReferenceChatProvider, build_default_gateway
+from .gateway import IN_PROCESS, DataResidency, ExecutionScope, GatewayError, GatewayPolicy, GatewayRoute, ProviderGateway, ProviderRegistry, ProviderRouter, ReferenceEmbeddingProvider, ReferenceChatProvider, build_default_gateway
 from .evidence_room import DocumentState, DocumentVersion, EvidenceEnvelope, EvidenceRoom, EvidenceState
 from .readiness import ReadinessContribution, ReadinessReport, compute_readiness
 from .reality import RealityComparison, RealityObservation, compare_position
@@ -94,6 +94,9 @@ __all__ = [
     "InvestigationPublication",
     "ReferenceInvestigationProvider",
     "investigate_and_publish",
+    "IN_PROCESS",
+    "DataResidency",
+    "ExecutionScope",
     "GatewayPolicy",
     "GatewayError",
     "GatewayRoute",

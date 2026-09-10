@@ -8,17 +8,19 @@ authoritative evidence by itself.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Protocol
 import hashlib
 import json
 import os
+import secrets
 import time
 import uuid
 
 from .http_providers import ProviderError, provider_from_environment
-from .providers import EngineeringProvider, ProviderRequest, ProviderResponse, ToolCall
+from .providers import EngineeringProvider, ProviderRequest, ProviderResponse
 from .telemetry import UsageLedger
 
 
@@ -26,8 +28,48 @@ class EmbeddingProvider(Protocol):
     def embed(self, inputs: list[str], model: str) -> list[list[float]]: ...
 
 
+class ExecutionScope(StrEnum):
+    """Where the model actually runs."""
+
+    LOCAL = "local"
+    PRIVATE_CLOUD = "private_cloud"
+    PUBLIC_CLOUD = "public_cloud"
+
+
+class DataResidency(StrEnum):
+    """How far the prompt travels."""
+
+    DEVICE = "device"
+    REGION = "region"
+    EXTERNAL = "external"
+
+
+#: Increasing distance from the device. A policy that permits a residency also
+#: permits everything closer to the device.
+RESIDENCY_DISTANCE = {DataResidency.DEVICE: 0, DataResidency.REGION: 1, DataResidency.EXTERNAL: 2}
+
+#: Execution scopes a project sensitivity permits. Sensitivity is a statement
+#: about the project, and it constrains routing regardless of provider names.
+#: A caller that wants no constraint must say so, because a sensitivity the
+#: gateway does not recognize is refused rather than read as "no limit".
+SENSITIVITY_SCOPES: dict[str, frozenset[ExecutionScope]] = {
+    "restricted": frozenset({ExecutionScope.LOCAL}),
+    "confidential": frozenset({ExecutionScope.LOCAL, ExecutionScope.PRIVATE_CLOUD}),
+    "unrestricted": frozenset(ExecutionScope),
+}
+
+
 @dataclass(frozen=True)
 class GatewayRoute:
+    """One way to reach a model, with its deployment properties declared.
+
+    execution_scope, data_residency and network_required are what a policy is
+    evaluated against. They are declared per route rather than inferred from a
+    provider or model name, because a name is not an enforceable property: a
+    route named local-private that reaches a public API is a promise the gateway
+    cannot keep.
+    """
+
     route_id: str
     logical_model: str
     provider: str
@@ -36,8 +78,19 @@ class GatewayRoute:
     false_closure_rate: float | None = None
     cost_per_1k_tokens: float | None = None
     latency_ms: float | None = None
-    local: bool = False
     capabilities: tuple[str, ...] = ("chat", "responses")
+    execution_scope: ExecutionScope = ExecutionScope.PUBLIC_CLOUD
+    data_residency: DataResidency = DataResidency.EXTERNAL
+    network_required: bool = True
+
+    @property
+    def is_local(self) -> bool:
+        """Local means all three: on this machine, on this device, offline."""
+        return (
+            self.execution_scope is ExecutionScope.LOCAL
+            and self.data_residency is DataResidency.DEVICE
+            and not self.network_required
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -49,9 +102,25 @@ class GatewayRoute:
             "falseClosureRate": self.false_closure_rate,
             "costPer1kTokens": self.cost_per_1k_tokens,
             "latencyMs": self.latency_ms,
-            "local": self.local,
+            "executionScope": self.execution_scope.value,
+            "dataResidency": self.data_residency.value,
+            "networkRequired": self.network_required,
+            "local": self.is_local,
             "capabilities": list(self.capabilities),
         }
+
+
+#: Deployment properties of a provider that runs in this process and reaches
+#: nothing. Spread into a GatewayRoute for a genuinely local route.
+IN_PROCESS = {
+    "execution_scope": ExecutionScope.LOCAL,
+    "data_residency": DataResidency.DEVICE,
+    "network_required": False,
+}
+
+
+class GatewayError(RuntimeError):
+    pass
 
 
 class ProviderRegistry:
@@ -89,16 +158,43 @@ class GatewayPolicy:
     allowed_providers: frozenset[str] = frozenset()
     allowed_models: frozenset[str] = frozenset()
     local_only: bool = False
+    required_execution_scopes: frozenset[ExecutionScope] = frozenset()
+    maximum_data_residency: DataResidency | None = None
     routing_strategy: str = "quality"
     api_key: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "allowedProviders": sorted(self.allowed_providers),
+            "allowedModels": sorted(self.allowed_models),
+            "localOnly": self.local_only,
+            "requiredExecutionScopes": sorted(scope.value for scope in self.required_execution_scopes),
+            "maximumDataResidency": None if self.maximum_data_residency is None else self.maximum_data_residency.value,
+            "routingStrategy": self.routing_strategy,
+            "apiKeyRequired": bool(self.api_key),
+        }
 
     def authorize(self, route: GatewayRoute) -> None:
         if self.allowed_providers and route.provider not in self.allowed_providers:
             raise PermissionError(f"provider is not allowed: {route.provider}")
         if self.allowed_models and route.logical_model not in self.allowed_models:
             raise PermissionError(f"model is not allowed: {route.logical_model}")
-        if self.local_only and not route.local:
-            raise PermissionError("policy requires a local route")
+        if self.local_only and not route.is_local:
+            raise PermissionError(
+                f"policy requires a local route; {route.route_id} runs "
+                f"{route.execution_scope.value} with {route.data_residency.value} data residency"
+            )
+        if self.required_execution_scopes and route.execution_scope not in self.required_execution_scopes:
+            permitted = sorted(scope.value for scope in self.required_execution_scopes)
+            raise PermissionError(
+                f"policy requires execution scope in {permitted}; "
+                f"{route.route_id} runs {route.execution_scope.value}"
+            )
+        if self.maximum_data_residency is not None and RESIDENCY_DISTANCE[route.data_residency] > RESIDENCY_DISTANCE[self.maximum_data_residency]:
+            raise PermissionError(
+                f"policy permits data residency up to {self.maximum_data_residency.value}; "
+                f"{route.route_id} sends data {route.data_residency.value}"
+            )
 
 
 class ProviderRouter:
@@ -110,8 +206,9 @@ class ProviderRouter:
         metadata = metadata or {}
         routes = self.registry.routes_for(logical_model, capability)
         routes = [route for route in routes if self._allowed(route)]
-        if metadata.get("localOnly") or metadata.get("projectSensitivity") == "restricted":
-            routes = [route for route in routes if route.local]
+        if metadata.get("localOnly"):
+            routes = [route for route in routes if route.is_local]
+        routes = self._within_sensitivity(routes, metadata.get("projectSensitivity"))
         strategy = str(metadata.get("routingStrategy", self.policy.routing_strategy))
         if strategy == "cost":
             return sorted(routes, key=lambda route: (route.cost_per_1k_tokens is None, route.cost_per_1k_tokens or float("inf")))
@@ -120,6 +217,24 @@ class ProviderRouter:
         if strategy == "quality":
             return sorted(routes, key=lambda route: (route.quality_score is None, -(route.quality_score or 0), route.false_closure_rate is None, route.false_closure_rate or float("inf")))
         return routes
+
+    @staticmethod
+    def _within_sensitivity(routes: list[GatewayRoute], sensitivity: Any) -> list[GatewayRoute]:
+        """Constrain routing by how sensitive the project is.
+
+        A misspelled or unknown sensitivity fails closed. Reading it as "no
+        limit" would turn a typo into an outbound data path.
+        """
+        if sensitivity is None:
+            return routes
+        normalized = str(sensitivity).strip().lower().replace("-", "_")
+        if not normalized:
+            return routes
+        permitted = SENSITIVITY_SCOPES.get(normalized)
+        if permitted is None:
+            known = ", ".join(sorted(SENSITIVITY_SCOPES))
+            raise GatewayError(f"unknown project sensitivity: {sensitivity!r}; known values are {known}")
+        return [route for route in routes if route.execution_scope in permitted]
 
     def _allowed(self, route: GatewayRoute) -> bool:
         try:
@@ -158,10 +273,6 @@ class ReferenceChatProvider:
             input_tokens=None,
             output_tokens=None,
         )
-
-
-class GatewayError(RuntimeError):
-    pass
 
 
 class ProviderGateway:
@@ -258,22 +369,58 @@ def _usage(response: ProviderResponse) -> dict[str, Any]:
 
 
 def build_default_gateway(*, ledger_path: str | Path = ".sfc/gateway-usage.jsonl") -> ProviderGateway:
+    """Assemble the reference gateway from the environment.
+
+    The in-process reference provider is always registered, and
+    ``sfc/local-private`` always routes to it. An upstream provider is added
+    alongside when one is configured, and it carries the deployment properties
+    it actually has - a public API is not local because the gateway happens to
+    run on a laptop. Consequently ``SFC_GATEWAY_LOCAL_ONLY=true`` still leaves a
+    usable route instead of emptying the routing table.
+    """
     registry = ProviderRegistry()
-    configured_provider = os.environ.get("SFC_GATEWAY_PROVIDER", "reference")
-    if configured_provider == "environment":
+    registry.register_provider("reference", ReferenceChatProvider(), embedding_provider=ReferenceEmbeddingProvider())
+    registry.register_route(GatewayRoute(
+        "route-local-private", "sfc/local-private", "reference", "sfc-reference",
+        quality_score=0.7, cost_per_1k_tokens=0.0, latency_ms=1,
+        capabilities=("chat", "responses", "embeddings"), **IN_PROCESS,
+    ))
+
+    upstream_configured = os.environ.get("SFC_GATEWAY_PROVIDER", "reference") == "environment"
+    if upstream_configured:
         provider_name = os.environ.get("SFC_PROVIDER", "openai-compatible")
-        provider = provider_from_environment()
-        embedding_provider = ReferenceEmbeddingProvider()
+        registry.register_provider(provider_name, provider_from_environment(), embedding_provider=ReferenceEmbeddingProvider())
+        upstream_model = os.environ.get("SFC_MODEL", "")
+        # A self-hosted deployment can declare what it really is; the default is
+        # the most conservative reading of an outbound HTTP call.
+        deployment = {
+            "execution_scope": ExecutionScope(os.environ.get("SFC_GATEWAY_EXECUTION_SCOPE", "public_cloud")),
+            "data_residency": DataResidency(os.environ.get("SFC_GATEWAY_DATA_RESIDENCY", "external")),
+            "network_required": True,
+        }
     else:
         provider_name = "reference"
-        provider = ReferenceChatProvider()
-        embedding_provider = ReferenceEmbeddingProvider()
-    registry.register_provider(provider_name, provider, embedding_provider=embedding_provider)
-    upstream_model = os.environ.get("SFC_MODEL", "sfc-reference" if provider_name == "reference" else "")
-    registry.register_route(GatewayRoute("route-engineering-fast", "sfc/engineering-fast", provider_name, upstream_model, quality_score=0.75, false_closure_rate=None, cost_per_1k_tokens=0.01, latency_ms=100, local=provider_name == "reference"))
-    registry.register_route(GatewayRoute("route-engineering-deep", "sfc/engineering-deep", provider_name, upstream_model, quality_score=0.9, false_closure_rate=None, cost_per_1k_tokens=0.04, latency_ms=500, local=provider_name == "reference"))
-    registry.register_route(GatewayRoute("route-local-private", "sfc/local-private", provider_name, upstream_model, quality_score=0.7, cost_per_1k_tokens=0.01, latency_ms=100, local=provider_name == "reference", capabilities=("chat", "responses", "embeddings")))
-    policy = GatewayPolicy(api_key=os.environ.get("SFC_GATEWAY_API_KEY"), local_only=os.environ.get("SFC_GATEWAY_LOCAL_ONLY") == "true", routing_strategy=os.environ.get("SFC_GATEWAY_ROUTING", "quality"))
+        upstream_model = os.environ.get("SFC_MODEL", "sfc-reference")
+        deployment = dict(IN_PROCESS)
+
+    registry.register_route(GatewayRoute(
+        "route-engineering-fast", "sfc/engineering-fast", provider_name, upstream_model,
+        quality_score=0.75, cost_per_1k_tokens=0.01, latency_ms=100, **deployment,
+    ))
+    registry.register_route(GatewayRoute(
+        "route-engineering-deep", "sfc/engineering-deep", provider_name, upstream_model,
+        quality_score=0.9, cost_per_1k_tokens=0.04, latency_ms=500, **deployment,
+    ))
+
+    scopes = os.environ.get("SFC_GATEWAY_EXECUTION_SCOPES", "")
+    residency = os.environ.get("SFC_GATEWAY_MAX_DATA_RESIDENCY")
+    policy = GatewayPolicy(
+        api_key=os.environ.get("SFC_GATEWAY_API_KEY"),
+        local_only=os.environ.get("SFC_GATEWAY_LOCAL_ONLY") == "true",
+        required_execution_scopes=frozenset(ExecutionScope(item.strip()) for item in scopes.split(",") if item.strip()),
+        maximum_data_residency=DataResidency(residency) if residency else None,
+        routing_strategy=os.environ.get("SFC_GATEWAY_ROUTING", "quality"),
+    )
     return ProviderGateway(registry, policy=policy, ledger=UsageLedger(ledger_path))
 
 
@@ -292,7 +439,8 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
         expected = self.gateway.router.policy.api_key
         if not expected:
             return True
-        return self.headers.get("Authorization", "") == f"Bearer {expected}"
+        # Constant time, so a wrong key does not leak its correct prefix.
+        return secrets.compare_digest(self.headers.get("Authorization", ""), f"Bearer {expected}")
 
     def do_GET(self) -> None:
         if not self._authorized():
@@ -305,6 +453,8 @@ class GatewayRequestHandler(BaseHTTPRequestHandler):
             self._send(200, {"object": "list", "data": self.gateway.registry.models()})
         elif path == "/v1/providers":
             self._send(200, {"object": "list", "data": self.gateway.registry.providers_view()})
+        elif path == "/v1/policy":
+            self._send(200, self.gateway.router.policy.to_dict())
         elif path == "/v1/routes":
             self._send(200, {"object": "list", "data": [route.to_dict() for route in self.gateway.registry.routes]})
         elif path == "/v1/usage":
