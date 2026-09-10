@@ -22,6 +22,7 @@ classifiers = [
 # SFC Core is stdlib-only by ADR 0001. These are for the conformance gate and
 # the test runner, and are never imported by the runtime.
 dev = [
+  "coverage>=7.4",
   "jsonschema>=4.20",
   "pytest>=8",
 ]
@@ -38,6 +39,27 @@ sfc = ["vocabularies/*.json"]
 
 [tool.setuptools.packages.find]
 where = ["packages/sfc-core/src"]
+
+[tool.coverage.run]
+# Branch coverage, because the subject is which way a decision went. A line
+# floor would miss exactly what is worth measuring.
+branch = true
+source = ["packages/sfc-core/src/sfc"]
+# The reference gateway spawns no subprocesses; measuring only the test process
+# keeps the number reproducible across machines.
+parallel = false
+
+[tool.coverage.report]
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+]
+show_missing = true
+skip_covered = false
+# The floors live in tools/coverage_gate.py, which holds the kernel modules to
+# a higher one than the runtime as a whole.
+fail_under = 0
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
