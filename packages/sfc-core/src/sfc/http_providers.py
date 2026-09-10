@@ -69,7 +69,14 @@ class GeminiProvider:
     def complete(self, request: ProviderRequest) -> ProviderResponse:
         model = request.model or self.default_model
         url = f"{self.base_url.rstrip('/')}/models/{model}:generateContent?key={self.api_key}"
-        body = _post(url, {}, {"contents": [{"parts": [{"text": request.prompt}]}]})
+        payload: dict[str, Any] = {"contents": [{"parts": [{"text": request.prompt}]}]}
+        if request.tools:
+            payload["tools"] = [{"function_declarations": [{
+                "name": tool["name"],
+                "description": tool.get("description", ""),
+                "parameters": tool.get("input_schema", {"type": "object"}),
+            } for tool in request.tools]}]
+        body = _post(url, {}, payload)
         candidates = body.get("candidates", [{}])
         parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
         usage = body.get("usageMetadata", {})
