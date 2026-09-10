@@ -21,6 +21,7 @@ from sfc.investigation import investigate_and_publish
 from sfc.io import load_obligation, load_world
 from sfc.lifecycle import ObligationStatus, ValueStatus, WorkPackage, WorkPackageStatus
 from sfc.models import Determination, Evidence, Obligation, ProjectWorld
+from sfc.conformance import validate_semantics
 from sfc.proofs import Proof
 from sfc.runtime import RunStore
 
@@ -58,6 +59,32 @@ class SchemaHealthTests(unittest.TestCase):
         self.assertEqual(reference, "determination.schema.json")
         resolved = run_validator._resolver.lookup(reference)
         self.assertEqual(resolved.contents["title"], "SFC Determination")
+
+    def test_a_run_embeds_the_proof_schema_rather_than_a_bare_object(self) -> None:
+        # A run declaring "proof": {"type": "object"} would leave
+        # proof.schema.json as parallel documentation: an invalid proof would
+        # still make a valid run.
+        run_validator = schemas.validator("run.schema.json")
+        alternatives = run_validator.schema["properties"]["proof"]["anyOf"]
+        self.assertIn({"$ref": "proof.schema.json"}, alternatives)
+        resolved = run_validator._resolver.lookup("proof.schema.json")
+        self.assertEqual(resolved.contents["title"], "SFC Proof")
+
+    def test_an_invalid_proof_makes_the_run_invalid(self) -> None:
+        obligation = load_obligation(EXAMPLE / "requirement.json")
+        world = load_world(EXAMPLE / "project-world.json")
+        determination = evaluate_obligation(obligation, world)
+        run = {
+            "runId": "RUN-1", "projectId": "P-1", "inputHash": "abc",
+            "status": "published", "createdAt": "2026-01-01T00:00:00Z",
+            "determination": determination.to_dict(),
+        }
+        validator = schemas.validator("run.schema.json")
+        proof = Proof.from_determination(determination).to_dict()
+        self.assertTrue(validator.is_valid({**run, "proof": proof}))
+        self.assertTrue(validator.is_valid({**run, "proof": None}))
+        self.assertFalse(validator.is_valid({**run, "proof": {"banana": "hello"}}))
+        self.assertFalse(validator.is_valid({**run, "proof": {k: v for k, v in proof.items() if k != "result"}}))
 
 
 class ExampleConformanceTests(unittest.TestCase):
@@ -204,6 +231,63 @@ class ControlPlaneConformanceTests(unittest.TestCase):
     def test_event_round_trips(self) -> None:
         event = Event("determination.produced", "OBL-1", {"status": "NOT_MET"}, actor_id="actor-1")
         schemas.assert_valid(self, "event.schema.json", event.to_dict())
+
+
+class SemanticConformanceTests(unittest.TestCase):
+    """Both layers hold on the artifacts SFC actually produces.
+
+    The schema decides shape; ``sfc.conformance`` decides whether the fields
+    can mean anything together. An artifact has to pass both to be publishable.
+    """
+
+    def setUp(self) -> None:
+        schemas.requires_schemas(self)
+
+    def test_every_produced_determination_is_semantically_conformant(self) -> None:
+        world = load_world(EXAMPLE / "project-world.json")
+        obligation = load_obligation(EXAMPLE / "requirement.json")
+        cases = {
+            "evaluated": (obligation, world),
+            "empty population": (
+                Obligation.from_dict({**obligation.to_dict(), "population": {"kind": "nothing_matches_this"}}),
+                world,
+            ),
+            "not applicable": (
+                Obligation.from_dict({**obligation.to_dict(), "population": {
+                    "kind": "nothing_matches_this",
+                    "applicability": {"applicable": False, "evidenceIds": ["E-SCOPE-1"]},
+                }}),
+                world,
+            ),
+        }
+        for name, (case_obligation, case_world) in cases.items():
+            with self.subTest(case=name):
+                determination = evaluate_obligation(case_obligation, case_world)
+                document = determination.to_dict()
+                schemas.assert_valid(self, "determination.schema.json", document)
+                validate_semantics("determination.schema.json", document)
+                validate_semantics("proof.schema.json", Proof.from_determination(determination).to_dict())
+
+    def test_a_published_run_and_its_proof_agree(self) -> None:
+        world = load_ifc(IFC_EXAMPLE / "demo.ifc")
+        with TemporaryDirectory() as directory:
+            store = RunStore(directory)
+            publication = investigate_and_publish(
+                world,
+                "Every electrical distribution board must maintain 36 inches of working clearance",
+                store=store,
+            )
+            on_disk = store.load_canonical()
+        schemas.assert_valid(self, "run.schema.json", on_disk)
+        validate_semantics("run.schema.json", on_disk)
+        self.assertIsNotNone(on_disk["proof"])
+
+    def test_a_proof_round_trips_through_json(self) -> None:
+        determination = evaluate_obligation(
+            load_obligation(EXAMPLE / "requirement.json"),
+            load_world(EXAMPLE / "project-world.json"),
+        )
+        schemas.assert_roundtrip(self, "proof.schema.json", Proof.from_determination(determination), Proof.from_dict)
 
 
 class VocabularyConformanceTests(unittest.TestCase):

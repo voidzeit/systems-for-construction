@@ -12,7 +12,7 @@
     "status": {"const": "published"},
     "createdAt": {"type": "string"},
     "evidenceIds": {"type": "array", "items": {"type": "string"}},
-    "proof": {"type": ["object", "null"]},
+    "proof": {"anyOf": [{"type": "null"}, {"$ref": "proof.schema.json"}]},
     "determination": {"$ref": "determination.schema.json"}
   },
   "additionalProperties": false

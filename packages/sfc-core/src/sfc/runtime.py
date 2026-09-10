@@ -12,6 +12,7 @@ import uuid
 
 from .models import Determination, ProjectWorld, Run, _hash, _utc_now
 from .assurance import validate_determination
+from .conformance import validate_semantics
 
 
 @dataclass(frozen=True)
@@ -57,13 +58,19 @@ class RunStore:
         return destination
 
     def publish(self, run: Run) -> Path:
+        # Two layers, because a run can be assembled from parts this runtime
+        # never produced: the determination's own invariants, then the document
+        # invariants that relate its fields and require the proof to describe
+        # the determination it travels with.
         validate_determination(run.determination)
+        document = run.to_dict()
+        validate_semantics("run.schema.json", document)
         run_dir = self.runs / run.run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         run_path = run_dir / "run.json"
-        self._atomic_json(run_path, run.to_dict())
+        self._atomic_json(run_path, document)
         # The canonical pointer is atomically replaced only after run.json is complete.
-        self._atomic_json(self.canonical, run.to_dict())
+        self._atomic_json(self.canonical, document)
         return run_path
 
     def load_canonical(self) -> dict[str, Any] | None:

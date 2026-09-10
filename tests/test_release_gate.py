@@ -1,4 +1,4 @@
-"""The SFC release gate: ten claims, each asserted end to end.
+"""The SFC release gate: eleven claims, each asserted end to end.
 
 Each claim below is covered in depth by a focused suite. This file exists so
 the set can be read and run as one statement of what SFC guarantees, rather
@@ -10,6 +10,7 @@ than reconstructed from a test tree.
     CONVERTIBLE UNITS         deterministically normalized
     INCOMPATIBLE DIMENSIONS   comparison rejected
     SCHEMA DRIFT              detected
+    PROOF AND RUN             one contract, and they must agree
     AEC VOCABULARY            injected, not built into the kernel
     CLI                       behaves as an installed user sees it
     LOCAL-PRIVATE             enforced by property, not by name
@@ -26,9 +27,11 @@ import unittest
 
 from sfc.assurance import AssuranceError, evaluate_obligation, validate_determination
 from sfc.cli import main
+from sfc.conformance import ConformanceError, validate_semantics
 from sfc.gateway import DataResidency, ExecutionScope, GatewayPolicy, GatewayRoute, build_default_gateway
 from sfc.io import load_obligation, load_world, read_json
 from sfc.models import DeterminationReason, DeterminationStatus, Obligation, ProjectWorld, Quantifier, Requirement, WorldElement
+from sfc.proofs import Proof
 from sfc.quantities import Quantity
 from sfc.runtime import RunStore, create_run
 from sfc.vocabulary import Vocabulary
@@ -123,6 +126,34 @@ class ReleaseGate(unittest.TestCase):
         determination = evaluate_obligation(load_obligation(EXAMPLE / "requirement.json"), load_world(EXAMPLE / "project-world.json"))
         self.assertTrue(validator.is_valid(determination.to_dict()))
         self.assertFalse(validator.is_valid({**determination.to_dict(), "driftedField": 1}))
+
+    def test_a_proof_belongs_to_the_run_that_carries_it(self) -> None:
+        from tests.conformance import schemas
+
+        schemas.requires_schemas(self)
+        obligation = load_obligation(EXAMPLE / "requirement.json")
+        world = load_world(EXAMPLE / "project-world.json")
+        determination = evaluate_obligation(obligation, world)
+        proof = Proof.from_determination(determination).to_dict()
+        with TemporaryDirectory() as directory:
+            store = RunStore(directory)
+            frozen = store.freeze(world, obligation)
+            store.publish(create_run(world, frozen, determination, proof=proof))
+            published = store.load_canonical()
+
+        # The run schema embeds the proof schema, so an invalid proof cannot
+        # ride inside a valid run.
+        validator = schemas.validator("run.schema.json")
+        self.assertTrue(validator.is_valid(published))
+        self.assertFalse(validator.is_valid({**published, "proof": {"banana": "hello"}}))
+
+        # And a schema-valid proof describing some other evaluation is refused
+        # by the semantic layer, which JSON Schema cannot express.
+        validate_semantics("run.schema.json", published)
+        with self.assertRaises(ConformanceError):
+            validate_semantics("run.schema.json", {**published, "proof": {**proof, "result": "MET"}})
+        with self.assertRaises(ConformanceError):
+            store.publish(create_run(world, frozen, determination, proof={**proof, "requirementId": "REQ-OTHER"}))
 
     def test_aec_vocabulary_is_injected_not_built_in(self) -> None:
         kernel = (ROOT / "packages/sfc-core/src/sfc/assurance.py").read_text(encoding="utf-8").lower()

@@ -46,6 +46,29 @@ class Proof:
             reasons=determination.reasons,
         )
 
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> "Proof":
+        """Load a proof written by any producer, not only by this runtime."""
+        population = value.get("population") or {}
+        return cls(
+            requirement_id=value.get("requirementId", ""),
+            population={
+                "expected": int(population.get("expected", 0)),
+                "evaluated": int(population.get("evaluated", 0)),
+            },
+            coverage=None if value.get("coverage") is None else float(value["coverage"]),
+            claims=tuple(value.get("claims", [])),
+            evidence=tuple(value.get("evidence", [])),
+            witnesses=tuple(value.get("witnesses", [])),
+            counterexamples=tuple(value.get("counterexamples", [])),
+            contradictions=tuple(value.get("contradictions", [])),
+            unknowns=tuple(value.get("unknowns", [])),
+            assumptions=tuple(value.get("assumptions", [])),
+            result=value.get("result", "UNKNOWN"),
+            inspected_evidence=tuple(value.get("inspectedEvidence", [])),
+            reasons=tuple(value.get("reasons", [])),
+        )
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "requirementId": self.requirement_id,

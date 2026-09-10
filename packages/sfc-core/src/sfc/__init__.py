@@ -41,6 +41,7 @@ from .models import (
     WorldElement,
 )
 from .proofs import Proof
+from .conformance import ConformanceError, determination_violations, proof_violations, run_violations, validate_semantics
 from .governance import Review, ReviewDecision, ValueRecord, current_review
 from .ifc import load_ifc, parse_ifc_text
 from .events import Event, EventLog
@@ -93,6 +94,11 @@ __all__ = [
     "Obligation",
     "ProjectWorld",
     "Proof",
+    "ConformanceError",
+    "determination_violations",
+    "proof_violations",
+    "run_violations",
+    "validate_semantics",
     "Review",
     "ReviewDecision",
     "Requirement",
