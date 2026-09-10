@@ -11,6 +11,7 @@ import tempfile
 import uuid
 
 from .models import Determination, ProjectWorld, Run, _hash, _utc_now
+from .assurance import validate_determination
 
 
 @dataclass(frozen=True)
@@ -56,6 +57,7 @@ class RunStore:
         return destination
 
     def publish(self, run: Run) -> Path:
+        validate_determination(run.determination)
         run_dir = self.runs / run.run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         run_path = run_dir / "run.json"
@@ -94,4 +96,3 @@ def create_run(world: ProjectWorld, frozen: FrozenInputs, determination: Determi
         input_hash=input_hash,
         determination=determination,
     )
-

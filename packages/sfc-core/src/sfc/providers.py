@@ -11,6 +11,14 @@ class ProviderRequest:
     prompt: str
     model: str | None = None
     metadata: dict[str, Any] | None = None
+    tools: tuple[dict[str, Any], ...] = ()
+
+
+@dataclass(frozen=True)
+class ToolCall:
+    call_id: str
+    name: str
+    arguments: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -20,6 +28,7 @@ class ProviderResponse:
     observed_model: str | None
     input_tokens: int | None = None
     output_tokens: int | None = None
+    tool_calls: tuple[ToolCall, ...] = ()
 
 
 class EngineeringProvider(Protocol):
@@ -30,4 +39,3 @@ class EngineeringProvider(Protocol):
 class VisionProvider(Protocol):
     def inspect(self, request: ProviderRequest) -> ProviderResponse:
         """Return a visual observation proposal with source provenance added by the adapter."""
-

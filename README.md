@@ -25,9 +25,10 @@ Canonical Run
 ```
 
 The reference runtime evaluates requirements against a provider-neutral
-`ProjectWorld`, imports common IFC STEP property sets without Autodesk, keeps
-candidate evidence separate from admitted evidence, records reproducible runs,
-and publishes results atomically.
+`ProjectWorld`, imports common IFC STEP property sets and relationships without
+Autodesk, runs bounded multi-turn investigations, keeps candidate evidence
+separate from admitted evidence, records reproducible runs, and publishes
+results atomically.
 
 ## Quick start
 

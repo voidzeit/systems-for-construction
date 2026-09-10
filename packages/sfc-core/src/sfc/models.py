@@ -114,6 +114,7 @@ class WorldElement:
     properties: dict[str, Any]
     evidence_by_property: dict[str, tuple[str, ...]] = field(default_factory=dict)
     source_id: str | None = None
+    geometry: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "WorldElement":
@@ -124,6 +125,7 @@ class WorldElement:
             properties=dict(value.get("properties", {})),
             evidence_by_property={key: tuple(items) for key, items in evidence.items()},
             source_id=value.get("sourceId"),
+            geometry=dict(value.get("geometry", {})),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -133,6 +135,7 @@ class WorldElement:
             "properties": self.properties,
             "evidence": {key: list(value) for key, value in self.evidence_by_property.items()},
             "sourceId": self.source_id,
+            "geometry": self.geometry,
         }
 
 

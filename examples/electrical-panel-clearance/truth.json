@@ -1,4 +1,10 @@
 {
   "status": "NOT_MET",
-  "expectedCounterexamples": ["LP-18"]
+  "expectedCounterexamples": ["LP-18"],
+  "expectedCoverage": 1.0,
+  "expectedEvidenceIds": [
+    "E-LP-01", "E-LP-02", "E-LP-03", "E-LP-04", "E-LP-05", "E-LP-06",
+    "E-LP-07", "E-LP-08", "E-LP-09", "E-LP-10", "E-LP-11", "E-LP-12",
+    "E-LP-13", "E-LP-14", "E-LP-15", "E-LP-16", "E-LP-17", "E-LP-18"
+  ]
 }

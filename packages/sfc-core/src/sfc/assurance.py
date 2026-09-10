@@ -25,6 +25,28 @@ OPERATORS: dict[str, Callable[[Any, Any], bool]] = {
 }
 
 
+class AssuranceError(ValueError):
+    """Raised when a determination violates an SFC invariant."""
+
+
+def validate_determination(determination: Determination) -> None:
+    if determination.expected_population < 0 or determination.evaluated_population < 0:
+        raise AssuranceError("population counts cannot be negative")
+    if determination.evaluated_population > determination.expected_population:
+        raise AssuranceError("evaluated population cannot exceed expected population")
+    if determination.conforming > determination.evaluated_population:
+        raise AssuranceError("conforming count cannot exceed evaluated population")
+    if not 0 <= determination.coverage <= 1:
+        raise AssuranceError("coverage must be between 0 and 1")
+    if determination.status is DeterminationStatus.MET:
+        if determination.evaluated_population != determination.expected_population:
+            raise AssuranceError("MET requires complete population coverage")
+        if determination.counterexamples or determination.unknowns:
+            raise AssuranceError("MET cannot contain counterexamples or unknowns")
+    if determination.status is DeterminationStatus.NOT_MET and not determination.counterexamples and determination.quantifier is Quantifier.ALL:
+        raise AssuranceError("ALL/NOT_MET requires a counterexample")
+
+
 def _matches_population(element: Any, population: dict[str, Any]) -> bool:
     if population.get("kind") and element.kind != population["kind"]:
         return False
@@ -144,4 +166,3 @@ def _determine_status(
             return DeterminationStatus.INCOMPLETE
         return DeterminationStatus.MET
     raise ValueError(f"unsupported quantifier: {quantifier}")
-

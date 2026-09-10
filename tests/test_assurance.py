@@ -60,3 +60,7 @@ class AssuranceTests(unittest.TestCase):
         self.assertEqual(len(world.elements), 2)
         self.assertEqual(world.elements[0].properties["WorkingClearance"], 42)
         self.assertEqual(world.elements[1].properties["WorkingClearance"], 29.4)
+        self.assertEqual(world.elements[0].geometry["placementRefs"], ["62"])
+        self.assertEqual(world.elements[0].geometry["coordinates"], [0.0, 0.0, 0.0])
+        self.assertEqual(len(world.relationships), 1)
+        self.assertIn("PANEL-IFC-01", world.relationships[0]["relatedEntityIds"])

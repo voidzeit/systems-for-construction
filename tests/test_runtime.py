@@ -6,6 +6,9 @@ import unittest
 from sfc.assurance import evaluate_obligation
 from sfc.io import load_obligation, load_world
 from sfc.runtime import RunStore, create_run
+from sfc.assurance import AssuranceError
+from dataclasses import replace
+from sfc.models import DeterminationStatus
 
 
 ROOT = Path(__file__).parents[1]
@@ -26,3 +29,13 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual(canonical["inputHash"], run.input_hash)
             self.assertEqual(canonical["determination"]["population"]["expected"], 18)
 
+    def test_publish_rejects_invalid_authoritative_determination(self) -> None:
+        obligation = load_obligation(ROOT / "examples/electrical-panel-clearance/requirement.json")
+        world = load_world(ROOT / "examples/electrical-panel-clearance/project-world.json")
+        with tempfile.TemporaryDirectory() as directory:
+            store = RunStore(directory)
+            frozen = store.freeze(world, obligation)
+            determination = evaluate_obligation(obligation, world)
+            invalid = replace(determination, status=DeterminationStatus.MET)
+            with self.assertRaises(AssuranceError):
+                store.publish(create_run(world, frozen, invalid))

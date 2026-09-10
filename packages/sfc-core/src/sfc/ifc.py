@@ -8,7 +8,6 @@ instead of being guessed.
 
 from __future__ import annotations
 
-from dataclasses import replace
 from pathlib import Path
 from typing import Any
 import hashlib
@@ -20,13 +19,15 @@ from .models import ProjectWorld, WorldElement
 ENTITY_RE = re.compile(r"#(?P<id>\d+)\s*=\s*(?P<kind>[A-Z0-9_]+)\s*\((?P<body>.*?)\)\s*;", re.IGNORECASE | re.DOTALL)
 REF_RE = re.compile(r"#(\d+)")
 STRING_RE = re.compile(r"'((?:''|[^'])*)'")
-PROPERTY_VALUE_RE = re.compile(r"\.?(?:IFCINTEGER|IFCREAL|IFCNUMBER|IFCBOOLEAN|IFCLOGICAL|IFCTEXT|IFCLABEL)\s*\((.*?)\)", re.IGNORECASE | re.DOTALL)
+PROPERTY_VALUE_RE = re.compile(r"\.?(?:IFCINTEGER|IFCREAL|IFCNUMBER|IFCBOOLEAN|IFCLOGICAL|IFCTEXT|IFCLABEL|IFCLENGTHMEASURE|IFCAREAMEASURE|IFCVOLUMEMEASURE)\s*\((.*?)\)", re.IGNORECASE | re.DOTALL)
+NUMBER_RE = re.compile(r"[-+]?(?:\d+\.\d*|\d*\.\d+|\d+)(?:[Ee][-+]?\d+)?")
 
 ELEMENT_KINDS = {
     "IFCWALL", "IFCWALLSTANDARDCASE", "IFCDOOR", "IFCWINDOW", "IFCSLAB",
     "IFCCOLUMN", "IFCBEAM", "IFCSPACE", "IFCFURNISHINGELEMENT",
     "IFCBUILDINGELEMENTPROXY", "IFCELECTRICDISTRIBUTIONBOARD",
     "IFCELECTRICAPPLIANCE", "IFCFLOWTERMINAL", "IFCFLOWSEGMENT",
+    "IFCSITE", "IFCBUILDING", "IFCBUILDINGSTOREY", "IFCSYSTEM", "IFCZONE",
 }
 
 
@@ -87,23 +88,54 @@ def parse_ifc_text(text: str, source_id: str = "ifc-source") -> ProjectWorld:
                 properties_by_element.setdefault(element_id, {})[name] = value
                 evidence_by_element.setdefault(element_id, {}).setdefault(name, []).append(f"ifc:{element_id}:{name}")
 
+    entity_to_element_id = {}
+    for entity_id, (kind, body) in entities.items():
+        if kind in ELEMENT_KINDS:
+            strings = STRING_RE.findall(body)
+            entity_to_element_id[entity_id] = _unquote(strings[0]) if strings else f"ifc-entity-{entity_id}"
+
+    points = {}
+    for entity_id, (kind, body) in entities.items():
+        if kind == "IFCCARTESIANPOINT":
+            points[entity_id] = [float(value) for value in NUMBER_RE.findall(body)]
+    axes = {entity_id: REF_RE.findall(body) for entity_id, (kind, body) in entities.items() if kind == "IFCAXIS2PLACEMENT3D"}
+    placements = {entity_id: REF_RE.findall(body) for entity_id, (kind, body) in entities.items() if kind == "IFCLOCALPLACEMENT"}
+
+    relationships = []
+    for entity_id, (kind, body) in entities.items():
+        if not kind.startswith("IFCREL") or kind == "IFCRELDEFINESBYPROPERTIES":
+            continue
+        references = [entity_to_element_id.get(reference, f"ifc-entity-{reference}") for reference in REF_RE.findall(body)]
+        if references:
+            relationships.append({"relationshipId": f"ifc-relation-{entity_id}", "type": kind.removeprefix("IFC").lower(), "relatedEntityIds": references, "sourceId": source_id})
+
     elements: list[WorldElement] = []
     for entity_id, (kind, body) in entities.items():
         if kind not in ELEMENT_KINDS:
             continue
         strings = STRING_RE.findall(body)
         element_id = _unquote(strings[0]) if strings else f"ifc-entity-{entity_id}"
+        placement_refs = [reference for reference in REF_RE.findall(body) if entities.get(reference, ("", ""))[0] == "IFCLOCALPLACEMENT"]
+        geometry: dict[str, Any] = {"placementRefs": placement_refs} if placement_refs else {}
+        if placement_refs:
+            placement = placements.get(placement_refs[0], [])
+            axis = next((axes[reference] for reference in placement if reference in axes), [])
+            point = next((points[reference] for reference in axis if reference in points), None)
+            if point is not None:
+                geometry["coordinates"] = point
         elements.append(WorldElement(
             element_id=element_id,
             kind=kind.removeprefix("IFC").lower(),
             properties=properties_by_element.get(entity_id, {}),
             evidence_by_property={key: tuple(value) for key, value in evidence_by_element.get(entity_id, {}).items()},
             source_id=source_id,
+            geometry=geometry,
         ))
     return ProjectWorld(
         project_id=project_id,
         elements=tuple(elements),
-        metadata={"connector": "sfc.ifc", "sourceId": source_id, "schema": "IFC STEP"},
+        metadata={"connector": "sfc.ifc", "sourceId": source_id, "schema": "IFC STEP", "unsupportedEntityCount": sum(1 for kind, _ in entities.values() if kind not in ELEMENT_KINDS and kind != "IFCPROJECT")},
+        relationships=tuple(relationships),
     )
 
 

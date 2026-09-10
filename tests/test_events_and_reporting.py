@@ -8,6 +8,7 @@ from sfc.io import load_obligation, load_world
 from sfc.assurance import evaluate_obligation
 from sfc.reporting import determination_csv, determination_html
 from sfc.runtime import RunStore, create_run
+from sfc.bench import run_benchmark
 
 
 ROOT = Path(__file__).parents[1]
@@ -32,3 +33,9 @@ class EventsAndReportingTests(unittest.TestCase):
             self.assertIn("NOT_MET", determination_csv(run))
             self.assertIn("LP-18", determination_html(run))
 
+    def test_benchmark_scores_evidence_and_counterexamples_when_truth_exists(self) -> None:
+        result = run_benchmark(ROOT / "examples/electrical-panel-clearance")
+        self.assertEqual(result["metrics"]["accuracy"], 1.0)
+        self.assertEqual(result["metrics"]["evidencePrecision"], 1.0)
+        self.assertEqual(result["metrics"]["evidenceRecall"], 1.0)
+        self.assertEqual(result["metrics"]["counterexampleRecall"], 1.0)

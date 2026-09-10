@@ -71,7 +71,7 @@ def handle(request: dict[str, Any]) -> dict[str, Any] | None:
     method = request.get("method")
     identifier = request.get("id")
     if method == "initialize":
-        value = {"protocolVersion": "2025-06-18", "serverInfo": {"name": "sfc-mcp", "version": "0.1.0a2"}, "capabilities": {"tools": {}}}
+        value = {"protocolVersion": "2025-06-18", "serverInfo": {"name": "sfc-mcp", "version": "0.1.0a3"}, "capabilities": {"tools": {}}}
         return {"jsonrpc": "2.0", "id": identifier, "result": value}
     if method == "notifications/initialized":
         return None
@@ -120,9 +120,10 @@ def handle(request: dict[str, Any]) -> dict[str, Any] | None:
                 if element is None:
                     raise ValueError(f"element not found: {arguments['elementId']}")
                 property_name = arguments["property"]
-                if property_name not in element.properties:
+                values = element.properties if property_name in element.properties else element.geometry
+                if property_name not in values:
                     raise ValueError(f"measurement not found: {property_name}")
-                return {"jsonrpc": "2.0", "id": identifier, "result": _result({"elementId": element.element_id, "property": property_name, "value": element.properties[property_name], "evidenceIds": list(element.evidence_by_property.get(property_name, ()))})}
+                return {"jsonrpc": "2.0", "id": identifier, "result": _result({"elementId": element.element_id, "property": property_name, "value": values[property_name], "evidenceIds": list(element.evidence_by_property.get(property_name, ()))})}
             raise ValueError(f"unknown tool: {name}")
         except (KeyError, OSError, ValueError, json.JSONDecodeError) as error:
             return {"jsonrpc": "2.0", "id": identifier, "error": {"code": -32602, "message": str(error)}}

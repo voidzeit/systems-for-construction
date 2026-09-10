@@ -9,7 +9,7 @@ import os
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from .providers import ProviderRequest, ProviderResponse
+from .providers import ProviderRequest, ProviderResponse, ToolCall
 
 
 class ProviderError(RuntimeError):
@@ -33,10 +33,13 @@ class OpenAICompatibleProvider:
 
     def complete(self, request: ProviderRequest) -> ProviderResponse:
         payload = {"model": request.model or self.default_model, "messages": [{"role": "user", "content": request.prompt}]}
+        if request.tools:
+            payload["tools"] = [{"type": "function", "function": {"name": tool["name"], "description": tool.get("description", ""), "parameters": tool.get("input_schema", {"type": "object"})}} for tool in request.tools]
         body = _post(self.base_url.rstrip("/") + "/chat/completions", {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}, payload)
         choice = body.get("choices", [{}])[0]
         usage = body.get("usage", {})
-        return ProviderResponse(choice.get("message", {}).get("content", ""), payload["model"], body.get("model"), usage.get("prompt_tokens"), usage.get("completion_tokens"))
+        calls = tuple(ToolCall(item.get("id", "tool-call"), item.get("function", {}).get("name", ""), json.loads(item.get("function", {}).get("arguments", "{}"))) for item in choice.get("message", {}).get("tool_calls", []))
+        return ProviderResponse(choice.get("message", {}).get("content", ""), payload["model"], body.get("model"), usage.get("prompt_tokens"), usage.get("completion_tokens"), calls)
 
 
 @dataclass
@@ -47,10 +50,14 @@ class AnthropicProvider:
 
     def complete(self, request: ProviderRequest) -> ProviderResponse:
         model = request.model or self.default_model
-        body = _post(self.base_url.rstrip("/") + "/v1/messages", {"x-api-key": self.api_key, "anthropic-version": "2023-06-01"}, {"model": model, "max_tokens": 4096, "messages": [{"role": "user", "content": request.prompt}]})
-        content = body.get("content", [{}])[0]
+        payload = {"model": model, "max_tokens": 4096, "messages": [{"role": "user", "content": request.prompt}]}
+        if request.tools:
+            payload["tools"] = [{"name": tool["name"], "description": tool.get("description", ""), "input_schema": tool.get("input_schema", {"type": "object"})} for tool in request.tools]
+        body = _post(self.base_url.rstrip("/") + "/v1/messages", {"x-api-key": self.api_key, "anthropic-version": "2023-06-01"}, payload)
+        content = next((item for item in body.get("content", []) if item.get("type") == "text"), {})
         usage = body.get("usage", {})
-        return ProviderResponse(content.get("text", ""), model, body.get("model"), usage.get("input_tokens"), usage.get("output_tokens"))
+        calls = tuple(ToolCall(item.get("id", "tool-call"), item.get("name", ""), item.get("input", {})) for item in body.get("content", []) if item.get("type") == "tool_use")
+        return ProviderResponse(content.get("text", ""), model, body.get("model"), usage.get("input_tokens"), usage.get("output_tokens"), calls)
 
 
 @dataclass
@@ -66,7 +73,8 @@ class GeminiProvider:
         candidates = body.get("candidates", [{}])
         parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
         usage = body.get("usageMetadata", {})
-        return ProviderResponse("".join(part.get("text", "") for part in parts), model, model, usage.get("promptTokenCount"), usage.get("candidatesTokenCount"))
+        calls = tuple(ToolCall(f"tool-call-{index}", part.get("functionCall", {}).get("name", ""), part.get("functionCall", {}).get("args", {})) for index, part in enumerate(parts) if part.get("functionCall"))
+        return ProviderResponse("".join(part.get("text", "") for part in parts), model, model, usage.get("promptTokenCount"), usage.get("candidatesTokenCount"), calls)
 
 
 def provider_from_environment() -> OpenAICompatibleProvider | AnthropicProvider | GeminiProvider:
