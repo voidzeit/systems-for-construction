@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from operator import eq, ge, gt, le, lt, ne
 from typing import Any, Callable
+import re
 
 from .models import (
     Counterexample,
@@ -48,12 +49,29 @@ def validate_determination(determination: Determination) -> None:
 
 
 def _matches_population(element: Any, population: dict[str, Any]) -> bool:
-    if population.get("kind") and element.kind != population["kind"]:
+    requested_kind = population.get("kind")
+    aliases = {
+        "electrical_panel": {"electrical_panel", "electricdistributionboard", "electrical_distribution_board"},
+        "electricdistributionboard": {"electrical_panel", "electricdistributionboard", "electrical_distribution_board"},
+        "electrical_distribution_board": {"electrical_panel", "electricdistributionboard", "electrical_distribution_board"},
+    }
+    if requested_kind and element.kind not in aliases.get(requested_kind, {requested_kind}):
         return False
     for key, expected in population.get("where", {}).items():
         if element.properties.get(key) != expected:
             return False
     return True
+
+
+def resolve_property(element: Any, requested: str) -> tuple[str, Any] | None:
+    if requested in element.properties:
+        return requested, element.properties[requested]
+    normalize = lambda value: re.sub(r"[^a-z0-9]", "", value.lower())
+    wanted = normalize(requested).removesuffix("inches")
+    for name, value in element.properties.items():
+        if normalize(name).removesuffix("inches") == wanted:
+            return name, value
+    return None
 
 
 def _check_predicate(observed: Any, predicate: dict[str, Any]) -> bool:
@@ -74,12 +92,13 @@ def evaluate_obligation(obligation: Obligation, world: ProjectWorld) -> Determin
     counterexamples: list[Counterexample] = []
 
     for element in population:
-        if property_name not in element.properties or element.properties[property_name] is None:
+        resolved = resolve_property(element, property_name)
+        if resolved is None or resolved[1] is None:
             unknowns.append(element.element_id)
             continue
-        observed = element.properties[property_name]
+        actual_property, observed = resolved
         evaluated += 1
-        element_evidence = tuple(element.evidence_by_property.get(property_name, ()))
+        element_evidence = tuple(element.evidence_by_property.get(actual_property, element.evidence_by_property.get(property_name, ())))
         evidence_ids.extend(element_evidence)
         try:
             conforms = _check_predicate(observed, obligation.predicate)

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://systemsforconstruction.org/spec/run.schema.json",
+  "title": "SFC Canonical Run",
+  "description": "A published, immutable execution artifact containing a validated determination.",
+  "type": "object",
+  "required": ["runId", "projectId", "inputHash", "status", "createdAt", "determination"],
+  "properties": {
+    "runId": {"type": "string"},
+    "projectId": {"type": "string"},
+    "inputHash": {"type": "string"},
+    "status": {"const": "published"},
+    "createdAt": {"type": "string"},
+    "evidenceIds": {"type": "array", "items": {"type": "string"}},
+    "proof": {"type": ["object", "null"]},
+    "determination": {"$ref": "determination.schema.json"}
+  },
+  "additionalProperties": false
+}

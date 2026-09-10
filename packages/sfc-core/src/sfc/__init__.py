@@ -19,6 +19,8 @@ from .events import Event, EventLog
 from .control_plane import ControlPlane
 from .agent_runtime import AgentRuntime, CandidateFinding, InvestigationResult, RegisteredTool, ToolObservation
 from .providers import ProviderRequest, ProviderResponse, ToolCall
+from .requirements import RequirementCompilationError, compile_requirement
+from .investigation import InvestigationPublication, ReferenceInvestigationProvider, investigate_and_publish
 
 __all__ = [
     "Counterexample",
@@ -45,6 +47,11 @@ __all__ = [
     "ProviderResponse",
     "ToolCall",
     "ToolObservation",
+    "RequirementCompilationError",
+    "compile_requirement",
+    "InvestigationPublication",
+    "ReferenceInvestigationProvider",
+    "investigate_and_publish",
     "ValueRecord",
     "WorldElement",
     "current_review",

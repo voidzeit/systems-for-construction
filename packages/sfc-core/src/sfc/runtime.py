@@ -87,7 +87,7 @@ class RunStore:
                 os.unlink(temporary)
 
 
-def create_run(world: ProjectWorld, frozen: FrozenInputs, determination: Determination) -> Run:
+def create_run(world: ProjectWorld, frozen: FrozenInputs, determination: Determination, *, evidence_ids: tuple[str, ...] = (), proof: dict[str, Any] | None = None) -> Run:
     run_id = f"run-{uuid.uuid4().hex[:12]}"
     input_hash = _hash({"world": frozen.world_hash, "obligation": frozen.obligation_hash})
     return Run(
@@ -95,4 +95,6 @@ def create_run(world: ProjectWorld, frozen: FrozenInputs, determination: Determi
         project_id=world.project_id,
         input_hash=input_hash,
         determination=determination,
+        evidence_ids=evidence_ids,
+        proof=proof,
     )

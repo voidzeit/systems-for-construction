@@ -53,10 +53,16 @@ python -m sfc support-bundle --output support-bundle.zip
 python -m sfc ifc-import model.ifc --output .sfc/project-world.json
 python -m sfc pdf-import drawings.pdf --output .sfc/drawing-world.json
 python -m sfc admit-evidence evidence.json --output .sfc/admitted-evidence.json
+python -m sfc investigate model.ifc --statement "Every electrical distribution board must maintain 36 inches of working clearance" --output .sfc/investigation.json
+python -m sfc investigate model.ifc --statement "Every electrical distribution board must maintain 36 inches of working clearance" --provider environment
 python -m sfc report .sfc/canonical-run.json --format html --output report.html
 python -m sfc serve --world .sfc/project-world.json --run .sfc/canonical-run.json
 python -m sfc.mcp
 ```
+
+The `reference` investigation provider is deterministic and offline. Use
+`--provider environment` to select an HTTP adapter through `SFC_PROVIDER`,
+`SFC_MODEL` and the matching provider credential environment variable.
 
 The local API serves the read-only Studio at `/` plus `/health`, `/project`,
 `/elements` and `/run`. The MCP gateway provides equivalent inspection tools

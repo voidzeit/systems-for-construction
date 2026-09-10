@@ -20,6 +20,8 @@ from .server import serve
 from .authority import EvidenceAuthority, EvidenceAdmissionError
 from .models import Evidence
 from .pdf import load_pdf
+from .investigation import investigate_and_publish
+from .http_providers import provider_from_environment
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -55,6 +57,13 @@ def build_parser() -> argparse.ArgumentParser:
     admit.add_argument("--output", type=Path, required=True)
     admit.add_argument("--min-authority", type=float, default=0.6)
 
+    investigate = sub.add_parser("investigate", help="compile a natural-language requirement and run a bounded reference investigation")
+    investigate.add_argument("source", type=Path, help="Project World JSON or IFC STEP file")
+    investigate.add_argument("--statement", required=True)
+    investigate.add_argument("--output", type=Path, default=Path(".sfc/investigation.json"))
+    investigate.add_argument("--store", type=Path, default=Path(".sfc"))
+    investigate.add_argument("--provider", choices=["reference", "environment"], default="reference", help="provider mode; environment reads SFC_PROVIDER and its credentials")
+
     bench = sub.add_parser("bench", help="run a deterministic synthetic benchmark fixture")
     bench.add_argument("fixture", type=Path)
     bench.add_argument("--output", type=Path)
@@ -88,6 +97,8 @@ def main(argv: list[str] | None = None) -> int:
         return _pdf_import(args)
     if args.command == "admit-evidence":
         return _admit_evidence(args)
+    if args.command == "investigate":
+        return _investigate(args)
     if args.command == "bench":
         return _bench(args)
     if args.command == "report":
@@ -163,6 +174,21 @@ def _admit_evidence(args: argparse.Namespace) -> int:
     write_json(args.output, result)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if not rejected else 1
+
+
+def _investigate(args: argparse.Namespace) -> int:
+    world = load_ifc(args.source) if args.source.suffix.lower() == ".ifc" else load_world(args.source)
+    provider = provider_from_environment() if args.provider == "environment" else None
+    publication = investigate_and_publish(world, args.statement, store=RunStore(args.store), provider=provider)
+    result = {
+        "agent": {"agentId": publication.agent.agent_id, "actions": publication.agent.actions, "terminalReason": publication.agent.terminal_reason, "findings": [{"statement": finding.statement, "evidenceIds": list(finding.evidence_ids)} for finding in publication.agent.findings]},
+        "admittedEvidence": [item.to_dict() for item in publication.admitted_evidence],
+        "proof": publication.proof.to_dict(),
+        "run": publication.run.to_dict(),
+    }
+    write_json(args.output, result)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0 if publication.determination.status in {DeterminationStatus.MET, DeterminationStatus.NOT_MET} else 1
 
 
 def _bench(args: argparse.Namespace) -> int:

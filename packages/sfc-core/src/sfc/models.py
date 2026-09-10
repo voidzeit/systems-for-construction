@@ -285,6 +285,8 @@ class Run:
     determination: Determination
     status: str = "published"
     created_at: str = field(default_factory=_utc_now)
+    evidence_ids: tuple[str, ...] = ()
+    proof: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -293,5 +295,7 @@ class Run:
             "inputHash": self.input_hash,
             "status": self.status,
             "createdAt": self.created_at,
+            "evidenceIds": list(self.evidence_ids),
+            "proof": self.proof,
             "determination": self.determination.to_dict(),
         }

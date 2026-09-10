@@ -71,6 +71,7 @@ class AgentRuntime:
         output_tokens = 0
         all_evidence_ids: list[str] = []
         transcript = task
+        observation_history: list[ToolObservation] = []
         tool_specs = tuple(self._tool_spec(tool) for tool in self.tools.values())
         terminal_reason = "provider_completed"
         response = self.provider.complete(ProviderRequest(prompt=transcript, tools=tool_specs))
@@ -106,9 +107,10 @@ class AgentRuntime:
                     next_observations.append(ToolObservation(call.name, {"error": str(error)}))
             if terminal_reason == "action_limit_exceeded":
                 break
+            observation_history.extend(next_observations)
             for observation in next_observations:
                 all_evidence_ids.extend(observation.evidence_ids)
-            transcript = f"{task}\n\nTool observations:\n{self._format_observations(next_observations)}\n\nContinue the investigation and return a grounded candidate finding when ready."
+            transcript = f"{task}\n\nTool observations:\n{self._format_observations(observation_history)}\n\nContinue the investigation and return a grounded candidate finding when ready."
             response = self.provider.complete(ProviderRequest(prompt=transcript, tools=tool_specs))
         if self.ledger:
             self.ledger.record(invocationId=uuid.uuid4().hex, agentId=self.policy.agent_id, provider="configured", durationSeconds=duration, inputTokens=input_tokens or None, outputTokens=output_tokens or None, actions=actions, terminalReason=terminal_reason)
