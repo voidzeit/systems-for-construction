@@ -10,7 +10,7 @@ import sys
 
 from .assurance import evaluate_obligation
 from .io import load_obligation, load_world, read_json, write_json
-from .models import DeterminationStatus
+from .models import Determination, DeterminationStatus
 from .runtime import RunStore, create_run
 from .support import create_support_bundle
 from .bench import run_benchmark
@@ -23,6 +23,7 @@ from .pdf import load_pdf
 from .investigation import investigate_and_publish
 from .http_providers import provider_from_environment
 from .gateway import serve_gateway
+from .readiness import compute_readiness
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -74,9 +75,16 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--format", choices=["json", "csv", "html"], required=True)
     report.add_argument("--output", type=Path, required=True)
 
+    readiness = sub.add_parser("readiness", help="calculate the Project Readiness Index from published runs")
+    readiness.add_argument("runs", nargs="+", type=Path)
+    readiness.add_argument("--evidence", type=Path)
+    readiness.add_argument("--output", type=Path)
+
     server = sub.add_parser("serve", help="serve a local read-only HTTP view")
     server.add_argument("--world", type=Path)
     server.add_argument("--run", type=Path)
+    server.add_argument("--evidence", type=Path)
+    server.add_argument("--events", type=Path)
     server.add_argument("--host", default="127.0.0.1")
     server.add_argument("--port", type=int, default=8787)
 
@@ -109,8 +117,10 @@ def main(argv: list[str] | None = None) -> int:
         return _bench(args)
     if args.command == "report":
         return _report(args)
+    if args.command == "readiness":
+        return _readiness(args)
     if args.command == "serve":
-        serve(args.world, args.run, args.host, args.port)
+        serve(args.world, args.run, args.host, args.port, evidence_path=args.evidence, event_path=args.events)
         return 0
     if args.command == "gateway":
         serve_gateway(host=args.host, port=args.port, ledger_path=args.ledger)
@@ -211,6 +221,28 @@ def _bench(args: argparse.Namespace) -> int:
 def _report(args: argparse.Namespace) -> int:
     destination = write_report(args.run, args.output, args.format)
     print(destination)
+    return 0
+
+
+def _readiness(args: argparse.Namespace) -> int:
+    determinations = []
+    for path in args.runs:
+        document = read_json(path)
+        run_document = document.get("run", document)
+        determinations.append(Determination.from_dict(run_document.get("determination", run_document)))
+    evidence: list[Evidence] = []
+    if args.evidence:
+        source = read_json(args.evidence)
+        records = source if isinstance(source, list) else source.get("admitted", source.get("evidence", [source]))
+        evidence = [Evidence.from_dict(item) for item in records]
+    else:
+        for path in args.runs:
+            document = read_json(path)
+            evidence.extend(Evidence.from_dict(item) for item in document.get("admittedEvidence", []))
+    result = compute_readiness(tuple(determinations), evidence).to_dict()
+    if args.output:
+        write_json(args.output, result)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
 

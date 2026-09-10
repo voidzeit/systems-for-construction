@@ -11,13 +11,28 @@
   <p>Local read-only Project World viewer.</p>
   <p class="status" id="status">Loading…</p>
   <h2>Project</h2><pre id="project"></pre>
+  <h2>Deep links</h2><div id="links"></div>
   <h2>Canonical run</h2><pre id="run"></pre>
   <script>
     async function load() {
-      const [project, run] = await Promise.all([fetch('/project').then(r => r.json()), fetch('/run').then(r => r.json())]);
+      const [project, run, readiness] = await Promise.all([fetch('/project').then(r => r.json()), fetch('/run').then(r => r.json()), fetch('/readiness').then(r => r.json())]);
       document.querySelector('#status').textContent = `${project.elements.length} Project World elements loaded`;
       document.querySelector('#project').textContent = JSON.stringify(project, null, 2);
       document.querySelector('#run').textContent = JSON.stringify(run, null, 2);
+      const readinessTitle = document.createElement('h2');
+      readinessTitle.textContent = 'Readiness Index';
+      const readinessBlock = document.createElement('pre');
+      readinessBlock.textContent = JSON.stringify(readiness, null, 2);
+      document.body.insertBefore(readinessTitle, document.querySelector('#links'));
+      document.body.insertBefore(readinessBlock, document.querySelector('#links'));
+      const links = document.querySelector('#links');
+      project.elements.slice(0, 20).forEach(element => {
+        const anchor = document.createElement('a');
+        anchor.href = `/projects/${encodeURIComponent(project.projectId)}/elements/${encodeURIComponent(element.elementId)}`;
+        anchor.textContent = `${element.elementId} (${element.kind})`;
+        anchor.style.display = 'block';
+        links.appendChild(anchor);
+      });
     }
     load().catch(error => { document.querySelector('#status').textContent = `Unable to load SFC data: ${error}`; });
   </script>

@@ -22,6 +22,10 @@ from .providers import ProviderRequest, ProviderResponse, ToolCall
 from .requirements import RequirementCompilationError, compile_requirement
 from .investigation import InvestigationPublication, ReferenceInvestigationProvider, investigate_and_publish
 from .gateway import GatewayError, GatewayPolicy, GatewayRoute, ProviderGateway, ProviderRegistry, ProviderRouter, ReferenceEmbeddingProvider, ReferenceChatProvider, build_default_gateway
+from .evidence_room import DocumentState, DocumentVersion, EvidenceEnvelope, EvidenceRoom, EvidenceState
+from .readiness import ReadinessContribution, ReadinessReport, compute_readiness
+from .reality import RealityComparison, RealityObservation, compare_position
+from .activity import ActionTask, activity_feed, derive_tasks
 
 __all__ = [
     "Counterexample",
@@ -62,6 +66,20 @@ __all__ = [
     "ReferenceEmbeddingProvider",
     "ReferenceChatProvider",
     "build_default_gateway",
+    "DocumentState",
+    "DocumentVersion",
+    "EvidenceEnvelope",
+    "EvidenceRoom",
+    "EvidenceState",
+    "ReadinessContribution",
+    "ReadinessReport",
+    "compute_readiness",
+    "RealityComparison",
+    "RealityObservation",
+    "compare_position",
+    "ActionTask",
+    "activity_feed",
+    "derive_tasks",
     "ValueRecord",
     "WorldElement",
     "current_review",

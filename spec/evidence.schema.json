@@ -7,7 +7,7 @@
   "properties": {
     "evidenceId": {"type": "string"},
     "sourceId": {"type": "string"},
-    "sourceType": {"enum": ["model_element", "parameter", "schedule_cell", "pdf_page", "pdf_region", "drawing_note", "table", "visual_observation", "external_document", "api_result", "calculated_fact"]},
+    "sourceType": {"enum": ["model_element", "parameter", "schedule_cell", "pdf_page", "pdf_region", "drawing_note", "table", "visual_observation", "point_cloud_segment", "external_document", "api_result", "calculated_fact"]},
     "locator": {"type": "object"},
     "observedValue": {},
     "authority": {"type": "number", "minimum": 0, "maximum": 1},

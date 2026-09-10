@@ -56,7 +56,8 @@ python -m sfc admit-evidence evidence.json --output .sfc/admitted-evidence.json
 python -m sfc investigate model.ifc --statement "Every electrical distribution board must maintain 36 inches of working clearance" --output .sfc/investigation.json
 python -m sfc investigate model.ifc --statement "Every electrical distribution board must maintain 36 inches of working clearance" --provider environment
 python -m sfc report .sfc/canonical-run.json --format html --output report.html
-python -m sfc serve --world .sfc/project-world.json --run .sfc/canonical-run.json
+python -m sfc readiness .sfc/canonical-run.json --evidence .sfc/evidence.json --output .sfc/readiness.json
+python -m sfc serve --world .sfc/project-world.json --run .sfc/canonical-run.json --evidence .sfc/evidence.json --events .sfc/events.jsonl
 python -m sfc gateway --port 8790
 python -m sfc.mcp
 ```
@@ -66,7 +67,9 @@ The `reference` investigation provider is deterministic and offline. Use
 `SFC_MODEL` and the matching provider credential environment variable.
 
 The local API serves the read-only Studio at `/` plus `/health`, `/project`,
-`/elements` and `/run`. The MCP gateway provides equivalent inspection tools
+`/elements`, `/run`, `/readiness`, `/activity` and `/tasks`. Stable deep links are available
+at `/projects/{projectId}/elements/{elementId}`, `/evidence/{evidenceId}`,
+`/requirements/{requirementId}` and `/runs/{runId}`. The MCP gateway provides equivalent inspection tools
 for Project World, elements, relationships, evidence, requirements, runs and
 measurements.
 

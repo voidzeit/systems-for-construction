@@ -37,6 +37,7 @@ class EvidenceSourceType(StrEnum):
     EXTERNAL_DOCUMENT = "external_document"
     API_RESULT = "api_result"
     CALCULATED_FACT = "calculated_fact"
+    POINT_CLOUD_SEGMENT = "point_cloud_segment"
 
 
 def _utc_now() -> str:
@@ -227,6 +228,10 @@ class Counterexample:
     evidence_ids: tuple[str, ...] = ()
     reason: str | None = None
 
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> "Counterexample":
+        return cls(value.get("subject", ""), value.get("observed"), value.get("expected"), tuple(value.get("evidenceIds", [])), value.get("reason"))
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "subject": self.subject,
@@ -254,6 +259,27 @@ class Determination:
     contradictions: tuple[str, ...] = ()
     generated_at: str = field(default_factory=_utc_now)
     rule_set_version: str = "sfc-assurance-1"
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> "Determination":
+        population = value.get("population", {})
+        return cls(
+            value.get("requirementId", ""),
+            value.get("obligationId", ""),
+            Quantifier(value.get("quantifier", "ALL")),
+            int(population.get("expected", 0)),
+            int(population.get("evaluated", 0)),
+            int(value.get("conforming", 0)),
+            float(value.get("coverage", 0.0)),
+            DeterminationStatus(value.get("determination", "UNKNOWN")),
+            tuple(Counterexample.from_dict(item) for item in value.get("counterexamples", [])),
+            tuple(value.get("evidenceIds", [])),
+            tuple(value.get("unknowns", [])),
+            tuple(value.get("assumptions", [])),
+            tuple(value.get("contradictions", [])),
+            value.get("generatedAt", _utc_now()),
+            value.get("ruleSetVersion", "sfc-assurance-1"),
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
