@@ -76,13 +76,7 @@ def validate_determination(determination: Determination) -> None:
                 f"coverage {determination.coverage} does not describe "
                 f"{determination.evaluated_population} of {determination.expected_population} subjects"
             )
-    if determination.status is DeterminationStatus.MET:
-        if determination.expected_population == 0:
-            raise AssuranceError("MET requires a non-empty population; absence is not compliance")
-        if determination.evaluated_population != determination.expected_population:
-            raise AssuranceError("MET requires complete population coverage")
-        if determination.counterexamples or determination.unknowns:
-            raise AssuranceError("MET cannot contain counterexamples or unknowns")
+    _validate_subjects(determination)
     if determination.status is DeterminationStatus.NOT_APPLICABLE:
         if determination.expected_population:
             raise AssuranceError("NOT_APPLICABLE requires an empty population")
@@ -90,8 +84,75 @@ def validate_determination(determination: Determination) -> None:
             raise AssuranceError("NOT_APPLICABLE requires evidence that the requirement does not apply")
         if determination.counterexamples or determination.unknowns:
             raise AssuranceError("NOT_APPLICABLE cannot contain counterexamples or unknowns")
-    if determination.status is DeterminationStatus.NOT_MET and not determination.counterexamples and determination.quantifier is Quantifier.ALL:
+    if determination.status is DeterminationStatus.MET:
+        _validate_met(determination)
+    if determination.status is DeterminationStatus.NOT_MET:
+        _validate_not_met(determination)
+
+
+def _validate_subjects(determination: Determination) -> None:
+    """No subject may hold two mutually exclusive roles at once."""
+    if len(determination.witnesses) > determination.conforming:
+        raise AssuranceError("more witnesses than conforming subjects")
+    witnesses = set(determination.witnesses)
+    failing = {item.subject for item in determination.counterexamples}
+    undecided = {item.subject for item in determination.unknowns}
+    for first, second, message in (
+        (witnesses, failing, "a subject cannot both satisfy and fail the predicate"),
+        (witnesses, undecided, "a subject cannot be both a witness and undecided"),
+        (failing, undecided, "a subject cannot be both a counterexample and undecided"),
+    ):
+        overlap = first & second
+        if overlap:
+            raise AssuranceError(f"{message}: {sorted(overlap)}")
+
+
+def _validate_met(determination: Determination) -> None:
+    """What it takes to close each quantifier as satisfied.
+
+    A universal claim is only settled by the whole population; an existential
+    claim is settled by one witness. Holding every quantifier to the universal
+    rule made an ANY determination unpublishable the moment a single subject
+    was left undecided, even though an undecided subject cannot refute the
+    claim that *some* subject satisfies the predicate.
+    """
+    quantifier = determination.quantifier
+    if determination.expected_population == 0:
+        raise AssuranceError("MET requires a non-empty population; absence is not compliance")
+    if quantifier is Quantifier.ANY:
+        if not determination.conforming:
+            raise AssuranceError("ANY/MET requires a conforming subject")
+        if not determination.witnesses:
+            raise AssuranceError("ANY/MET must name the witness it rests on")
+        return
+    # ALL, NONE and COUNT each assert something about the whole population, so
+    # a subject that was never decided leaves the claim open.
+    if determination.evaluated_population != determination.expected_population:
+        raise AssuranceError(f"{quantifier.value}/MET requires complete population coverage")
+    if determination.unknowns:
+        raise AssuranceError(f"{quantifier.value}/MET cannot leave a subject undecided")
+    if quantifier is Quantifier.ALL and determination.counterexamples:
+        raise AssuranceError("ALL/MET cannot contain a counterexample")
+    if quantifier is Quantifier.NONE and determination.conforming:
+        raise AssuranceError("NONE/MET requires that no subject satisfies the predicate")
+
+
+def _validate_not_met(determination: Determination) -> None:
+    """What it takes to close each quantifier as violated.
+
+    A universal claim falls to one subject; an existential claim falls only
+    once the whole population has been looked at and none of it qualified.
+    """
+    quantifier = determination.quantifier
+    if quantifier is Quantifier.ALL and not determination.counterexamples:
         raise AssuranceError("ALL/NOT_MET requires a counterexample")
+    if quantifier is Quantifier.NONE and not determination.witnesses:
+        raise AssuranceError("NONE/NOT_MET must name the subject that satisfies the predicate")
+    if quantifier is Quantifier.ANY:
+        if determination.conforming:
+            raise AssuranceError("ANY/NOT_MET contradicts a conforming subject")
+        if determination.evaluated_population != determination.expected_population:
+            raise AssuranceError("ANY/NOT_MET requires complete population coverage")
 
 
 def _matches_population(element: Any, spec: PopulationSpec, vocabulary: Vocabulary) -> bool:
@@ -285,6 +346,7 @@ def evaluate_obligation(obligation: Obligation, world: ProjectWorld, *, vocabula
     expected_quantity = Quantity.parse(obligation.predicate.get("value"), obligation.predicate.get("unit"))
     evaluated = 0
     conforming = 0
+    witnesses: list[str] = []
     evidence_ids: list[str] = []
     unknowns: list[Unresolved] = []
     reasons: list[str] = []
@@ -333,6 +395,7 @@ def evaluate_obligation(obligation: Obligation, world: ProjectWorld, *, vocabula
             assumptions.append(outcome.assumption)
         if outcome.conforms:
             conforming += 1
+            witnesses.append(element.element_id)
         else:
             counterexamples.append(
                 Counterexample(
@@ -369,6 +432,7 @@ def evaluate_obligation(obligation: Obligation, world: ProjectWorld, *, vocabula
         conforming=conforming,
         coverage=round(coverage, 6),
         status=status,
+        witnesses=tuple(witnesses),
         counterexamples=tuple(counterexamples),
         evidence_ids=tuple(dict.fromkeys(evidence_ids)),
         unknowns=tuple(unknowns),

@@ -1,10 +1,11 @@
-"""The SFC release gate: nine claims, each asserted end to end.
+"""The SFC release gate: ten claims, each asserted end to end.
 
 Each claim below is covered in depth by a focused suite. This file exists so
 the set can be read and run as one statement of what SFC guarantees, rather
 than reconstructed from a test tree.
 
     EMPTY POPULATION          never MET, and never covered, without evidence
+    QUANTIFIERS               each closes on its own terms, and publishes
     UNKNOWN UNIT              never numerically compared
     CONVERTIBLE UNITS         deterministically normalized
     INCOMPATIBLE DIMENSIONS   comparison rejected
@@ -73,6 +74,24 @@ class ReleaseGate(unittest.TestCase):
         # Nor may a document claim it covered a population it never established.
         with self.assertRaises(AssuranceError):
             validate_determination(_evaluated_all_of_nothing())
+
+    def test_each_quantifier_closes_on_its_own_terms(self) -> None:
+        existential = Obligation("O", population={"kind": "board"}, **{**BOARD, "quantifier": Quantifier.ANY})
+        world = ProjectWorld("p", (
+            WorldElement("B-1", "board", {"working_clearance": {"value": 1.0, "unit": "m"}}, {"working_clearance": ("E-1",)}),
+            WorldElement("B-2", "board", {"working_clearance": 29.4}, {"working_clearance": ("E-2",)}),
+        ))
+        witnessed = evaluate_obligation(existential, world)
+        # One witness settles an existential claim; the undecided subject does
+        # not refute it, and the publication boundary agrees.
+        self.assertEqual(witnessed.status, DeterminationStatus.MET)
+        self.assertEqual(witnessed.witnesses, ("B-1",))
+        self.assertEqual(witnessed.coverage, 0.5)
+        validate_determination(witnessed)
+
+        universal = evaluate_obligation(Obligation("O", population={"kind": "board"}, **BOARD), world)
+        # The same partial coverage leaves a universal claim open.
+        self.assertEqual(universal.status, DeterminationStatus.INCOMPLETE)
 
     def test_unknown_unit_is_never_numerically_compared(self) -> None:
         determination = evaluate_obligation(Obligation("O", population={"kind": "board"}, **BOARD), _world(29.4))

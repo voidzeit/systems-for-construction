@@ -396,6 +396,10 @@ class Determination:
     rule_set_version: str = "sfc-assurance-1"
     reasons: tuple[str, ...] = ()
     applicability: dict[str, Any] | None = None
+    #: Subjects that satisfy the predicate. A count alone cannot answer which
+    #: subject an existential claim rests on, or which subject violated a
+    #: prohibition, so the identities are recorded alongside ``conforming``.
+    witnesses: tuple[str, ...] = ()
 
     @property
     def inspected_evidence_ids(self) -> tuple[str, ...]:
@@ -432,6 +436,7 @@ class Determination:
             value.get("ruleSetVersion", "sfc-assurance-1"),
             tuple(value.get("reasons", [])),
             value.get("applicability"),
+            tuple(value.get("witnesses", [])),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -445,6 +450,7 @@ class Determination:
             },
             "coverage": self.coverage,
             "conforming": self.conforming,
+            "witnesses": list(self.witnesses),
             "counterexamples": [item.to_dict() for item in self.counterexamples],
             "evidenceIds": list(self.evidence_ids),
             "inspectedEvidenceIds": list(self.inspected_evidence_ids),

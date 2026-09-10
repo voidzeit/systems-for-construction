@@ -36,7 +36,7 @@ class Proof:
             coverage=determination.coverage,
             claims=claims,
             evidence=determination.evidence_ids,
-            witnesses=tuple(item.subject for item in determination.counterexamples),
+            witnesses=determination.witnesses,
             counterexamples=tuple(item.to_dict() for item in determination.counterexamples),
             contradictions=determination.contradictions,
             unknowns=tuple(item.to_dict() for item in determination.unknowns),

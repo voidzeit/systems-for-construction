@@ -21,7 +21,13 @@ class InvestigationTests(unittest.TestCase):
             )
             self.assertEqual(publication.agent.actions, 3)
             self.assertEqual(publication.determination.status.value, "NOT_MET")
-            self.assertEqual(publication.proof.witnesses, ("PANEL-IFC-02",))
+            # A witness satisfies the predicate; a counterexample refutes it.
+            # These are different subjects, and the proof must not conflate them.
+            self.assertEqual(publication.proof.witnesses, ("PANEL-IFC-01",))
+            self.assertEqual(
+                tuple(item["subject"] for item in publication.proof.counterexamples),
+                ("PANEL-IFC-02",),
+            )
             self.assertEqual(len(publication.run.evidence_ids), 2)
             self.assertEqual(publication.run.proof["result"], "NOT_MET")
 
