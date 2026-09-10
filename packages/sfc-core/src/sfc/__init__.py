@@ -43,7 +43,7 @@ from .proofs import Proof
 from .governance import Review, ReviewDecision, ValueRecord, current_review
 from .ifc import load_ifc, parse_ifc_text
 from .events import Event, EventLog
-from .control_plane import ControlPlane
+from .control_plane import ControlPlane, ReplayError
 from .agent_runtime import AgentRuntime, CandidateFinding, InvestigationResult, RegisteredTool, ToolObservation
 from .providers import ProviderRequest, ProviderResponse, ToolCall
 from .requirements import RequirementCompilationError, compile_requirement
@@ -64,6 +64,7 @@ __all__ = [
     "EmptyPopulationPolicy",
     "PopulationSpec",
     "ControlPlane",
+    "ReplayError",
     "Determination",
     "Evidence",
     "EvidenceAdmissionError",

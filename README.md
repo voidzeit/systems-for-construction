@@ -111,4 +111,12 @@ contracts, provider adapters, a local read-only API, a Studio reference page,
 benchmarks and an MCP gateway. Production Revit coverage, durable service
 deployment and enterprise control plane features remain extension points.
 
+The reference control plane and evidence room are **in-memory**: they define
+what a valid transition is, and their state is gone when the process ends. The
+append-only event log is what persists, and `ControlPlane.from_events` reduces
+it back into derived state, applying the same rules as live execution so an
+invalid log fails to replay rather than reconstructing a forbidden state. A
+durable, multi-tenant deployment builds on these contracts; it is deliberately
+not part of SFC Core.
+
 See [ARCHITECTURE.md](ARCHITECTURE.md), [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/adr/](docs/adr/) for the public design record.
