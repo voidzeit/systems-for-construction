@@ -21,6 +21,7 @@ from .agent_runtime import AgentRuntime, CandidateFinding, InvestigationResult, 
 from .providers import ProviderRequest, ProviderResponse, ToolCall
 from .requirements import RequirementCompilationError, compile_requirement
 from .investigation import InvestigationPublication, ReferenceInvestigationProvider, investigate_and_publish
+from .gateway import GatewayError, GatewayPolicy, GatewayRoute, ProviderGateway, ProviderRegistry, ProviderRouter, ReferenceEmbeddingProvider, ReferenceChatProvider, build_default_gateway
 
 __all__ = [
     "Counterexample",
@@ -52,6 +53,15 @@ __all__ = [
     "InvestigationPublication",
     "ReferenceInvestigationProvider",
     "investigate_and_publish",
+    "GatewayPolicy",
+    "GatewayError",
+    "GatewayRoute",
+    "ProviderGateway",
+    "ProviderRegistry",
+    "ProviderRouter",
+    "ReferenceEmbeddingProvider",
+    "ReferenceChatProvider",
+    "build_default_gateway",
     "ValueRecord",
     "WorldElement",
     "current_review",

@@ -57,6 +57,7 @@ python -m sfc investigate model.ifc --statement "Every electrical distribution b
 python -m sfc investigate model.ifc --statement "Every electrical distribution board must maintain 36 inches of working clearance" --provider environment
 python -m sfc report .sfc/canonical-run.json --format html --output report.html
 python -m sfc serve --world .sfc/project-world.json --run .sfc/canonical-run.json
+python -m sfc gateway --port 8790
 python -m sfc.mcp
 ```
 
@@ -68,6 +69,11 @@ The local API serves the read-only Studio at `/` plus `/health`, `/project`,
 `/elements` and `/run`. The MCP gateway provides equivalent inspection tools
 for Project World, elements, relationships, evidence, requirements, runs and
 measurements.
+
+The SFC AI Gateway serves OpenAI-shaped `/v1/chat/completions`,
+`/v1/responses` and `/v1/embeddings` endpoints plus model, provider, route,
+usage and health views. It exposes logical models and keeps a provider ledger;
+see [docs/concepts/ai-gateway.md](docs/concepts/ai-gateway.md).
 
 ## Repository shape
 

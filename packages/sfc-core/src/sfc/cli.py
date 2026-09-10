@@ -22,6 +22,7 @@ from .models import Evidence
 from .pdf import load_pdf
 from .investigation import investigate_and_publish
 from .http_providers import provider_from_environment
+from .gateway import serve_gateway
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -78,6 +79,11 @@ def build_parser() -> argparse.ArgumentParser:
     server.add_argument("--run", type=Path)
     server.add_argument("--host", default="127.0.0.1")
     server.add_argument("--port", type=int, default=8787)
+
+    gateway = sub.add_parser("gateway", help="serve the local SFC AI Gateway")
+    gateway.add_argument("--host", default="127.0.0.1")
+    gateway.add_argument("--port", type=int, default=8790)
+    gateway.add_argument("--ledger", type=Path, default=Path(".sfc/gateway-usage.jsonl"))
     return parser
 
 
@@ -105,6 +111,9 @@ def main(argv: list[str] | None = None) -> int:
         return _report(args)
     if args.command == "serve":
         serve(args.world, args.run, args.host, args.port)
+        return 0
+    if args.command == "gateway":
+        serve_gateway(host=args.host, port=args.port, ledger_path=args.ledger)
         return 0
     return 2
 
