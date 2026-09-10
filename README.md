@@ -102,6 +102,10 @@ The core does not import FastAPI, SQLAlchemy, Autodesk SDKs, cloud SDKs or a mod
 - A failed run cannot replace the last valid canonical publication.
 - Every fact has provenance, and every determination identifies its population and coverage.
 - Missing measurements stay missing. They are never reported as zero.
+- A quantifier closes on the terms it claims: a universal claim needs the whole
+  population, an existential claim needs one named witness.
+- Evidence a determination rests on is never conflated with evidence merely
+  inspected on a subject it could not decide.
 
 ## Status
 
@@ -113,10 +117,25 @@ deployment and enterprise control plane features remain extension points.
 
 The reference control plane and evidence room are **in-memory**: they define
 what a valid transition is, and their state is gone when the process ends. The
-append-only event log is what persists, and `ControlPlane.from_events` reduces
-it back into derived state, applying the same rules as live execution so an
-invalid log fails to replay rather than reconstructing a forbidden state. A
-durable, multi-tenant deployment builds on these contracts; it is deliberately
-not part of SFC Core.
+append-only event log is what persists, and both projections reduce back from
+it - `ControlPlane.from_events` and `EvidenceRoom.from_events` - applying the
+same rules as live execution, so an invalid log fails to replay rather than
+reconstructing a forbidden state, and a log carrying an event type the build
+cannot read is refused rather than reduced into a state that omits it.
+
+What the log is **not** yet: tamper-evident. It is append-only by convention
+rather than by construction, so removing a line leaves no trace. A hash chain
+and stream versioning for concurrent writers belong to a durable deployment
+layer, along with multi-tenancy and identity; they are deliberately not part of
+SFC Core.
+
+The contract has two layers, and both are executed. `spec/*.schema.json`
+decides shape; `sfc.conformance` decides whether the fields can mean anything
+together - that coverage describes the counts it summarises, that supporting
+and inspected evidence stay disjoint, that a run's proof is a proof of that
+run's determination. `RunStore.publish` applies both, so an adapter writing
+JSON directly cannot publish a document that is well-formed and semantically
+impossible. See [spec/README.md](spec/README.md) for the invariants a producer
+in another language has to satisfy.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md), [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/adr/](docs/adr/) for the public design record.
