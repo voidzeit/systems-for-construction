@@ -37,6 +37,7 @@ from .models import (
     ProjectWorld,
     Requirement,
     Run,
+    Unresolved,
     WorldElement,
 )
 from .proofs import Proof
@@ -95,6 +96,7 @@ __all__ = [
     "Review",
     "ReviewDecision",
     "Requirement",
+    "Unresolved",
     "RegisteredTool",
     "Run",
     "ProviderRequest",

@@ -338,6 +338,44 @@ class Counterexample:
 
 
 @dataclass(frozen=True)
+class Unresolved:
+    """A subject the determination could not decide, and why.
+
+    Evidence encountered while examining such a subject is recorded here rather
+    than in the determination's evidence, because it was inspected and did not
+    support a conclusion. Conflating the two would assert that a determination
+    rests on evidence for a subject it never decided.
+    """
+
+    subject: str
+    reason: str
+    evidence_ids: tuple[str, ...] = ()
+    detail: str | None = None
+
+    @classmethod
+    def from_dict(cls, value: Any) -> "Unresolved":
+        if isinstance(value, str):
+            # Contracts written before unknowns were structured carried a
+            # subject, sometimes with the detail appended after a colon.
+            subject, separator, detail = value.partition(": ")
+            return cls(subject, "UNSPECIFIED", (), detail if separator else None)
+        return cls(
+            subject=value.get("subject", ""),
+            reason=value.get("reason", "UNSPECIFIED"),
+            evidence_ids=tuple(value.get("evidenceIds", [])),
+            detail=value.get("detail"),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "subject": self.subject,
+            "reason": self.reason,
+            "evidenceIds": list(self.evidence_ids),
+            "detail": self.detail,
+        }
+
+
+@dataclass(frozen=True)
 class Determination:
     requirement_id: str
     obligation_id: str
@@ -348,14 +386,30 @@ class Determination:
     coverage: float | None
     status: DeterminationStatus
     counterexamples: tuple[Counterexample, ...] = ()
+    #: Evidence that supports the determination. Only subjects that were
+    #: actually evaluated contribute to it.
     evidence_ids: tuple[str, ...] = ()
-    unknowns: tuple[str, ...] = ()
+    unknowns: tuple[Unresolved, ...] = ()
     assumptions: tuple[Any, ...] = ()
     contradictions: tuple[str, ...] = ()
     generated_at: str = field(default_factory=_utc_now)
     rule_set_version: str = "sfc-assurance-1"
     reasons: tuple[str, ...] = ()
     applicability: dict[str, Any] | None = None
+
+    @property
+    def inspected_evidence_ids(self) -> tuple[str, ...]:
+        """Evidence examined on subjects that could not be evaluated.
+
+        Kept separate from ``evidence_ids`` so a proof can say what was looked
+        at without implying it grounds the conclusion.
+        """
+        seen: dict[str, None] = {}
+        for item in self.unknowns:
+            for evidence_id in item.evidence_ids:
+                if evidence_id not in self.evidence_ids:
+                    seen.setdefault(evidence_id, None)
+        return tuple(seen)
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "Determination":
@@ -371,7 +425,7 @@ class Determination:
             DeterminationStatus(value.get("determination", "UNKNOWN")),
             tuple(Counterexample.from_dict(item) for item in value.get("counterexamples", [])),
             tuple(value.get("evidenceIds", [])),
-            tuple(value.get("unknowns", [])),
+            tuple(Unresolved.from_dict(item) for item in value.get("unknowns", [])),
             tuple(value.get("assumptions", [])),
             tuple(value.get("contradictions", [])),
             value.get("generatedAt", _utc_now()),
@@ -393,7 +447,8 @@ class Determination:
             "conforming": self.conforming,
             "counterexamples": [item.to_dict() for item in self.counterexamples],
             "evidenceIds": list(self.evidence_ids),
-            "unknowns": list(self.unknowns),
+            "inspectedEvidenceIds": list(self.inspected_evidence_ids),
+            "unknowns": [item.to_dict() for item in self.unknowns],
             "assumptions": list(self.assumptions),
             "contradictions": list(self.contradictions),
             "determination": self.status.value,

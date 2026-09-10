@@ -19,6 +19,12 @@ Every non-obvious status carries machine-readable `reasons`:
 | `NOT_APPLICABLE_EVIDENCED` | Non-applicability is evidenced, so the empty population closes. |
 | `MISSING_OBSERVATION` | A subject carried no value for the requested property. |
 | `PREDICATE_NOT_EVALUABLE` | A value existed but the predicate could not be applied to it. |
+| `UNRESOLVED_MEASUREMENT_UNIT` | Exactly one side of the comparison declared a unit. |
+| `UNKNOWN_MEASUREMENT_UNIT` | A unit was declared that SFC cannot express. |
+| `INCOMPATIBLE_MEASUREMENT_DIMENSION` | Both units were known and measured different dimensions. |
+
+The same codes appear on each unresolved subject, alongside the evidence that
+was inspected without deciding it. See ADR 0007 and ADR 0008.
 
 ## Obligation
 

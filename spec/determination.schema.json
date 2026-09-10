@@ -94,13 +94,15 @@
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "Evidence supporting the determination. Only evaluated subjects contribute."
     },
     "unknowns": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
+        "$ref": "#/$defs/unresolved"
+      },
+      "description": "Subjects the determination could not decide, each with a machine-readable reason and the evidence that was inspected."
     },
     "assumptions": {
       "type": "array",
@@ -167,6 +169,13 @@
         }
       },
       "additionalProperties": false
+    },
+    "inspectedEvidenceIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Evidence examined on subjects that could not be evaluated. Kept apart from evidenceIds, which is the evidence the determination rests on."
     }
   },
   "additionalProperties": false,
@@ -209,6 +218,34 @@
           ]
         },
         "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "unresolved": {
+      "type": "object",
+      "required": [
+        "subject",
+        "reason"
+      ],
+      "properties": {
+        "subject": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "detail": {
           "type": [
             "string",
             "null"

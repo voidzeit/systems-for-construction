@@ -63,6 +63,13 @@
       "items": {
         "type": "string"
       }
+    },
+    "inspectedEvidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Evidence looked at without supporting the conclusion."
     }
   },
   "additionalProperties": false

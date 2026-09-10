@@ -28,6 +28,7 @@ from .models import (
     PopulationSpec,
     ProjectWorld,
     Quantifier,
+    Unresolved,
 )
 
 
@@ -128,6 +129,15 @@ class _Outcome:
     expected: Any
     measurement: dict[str, Any] | None = None
     assumption: dict[str, Any] | None = None
+
+
+def _evidence_for(element: Any, requested: str | None, resolved: str | None) -> tuple[str, ...]:
+    """Evidence the element carries for the property under examination."""
+    by_property = element.evidence_by_property
+    for name in (resolved, requested):
+        if name is not None and name in by_property:
+            return tuple(by_property[name])
+    return ()
 
 
 def _check_predicate(
@@ -258,7 +268,7 @@ def evaluate_obligation(obligation: Obligation, world: ProjectWorld, *, vocabula
     evaluated = 0
     conforming = 0
     evidence_ids: list[str] = []
-    unknowns: list[str] = []
+    unknowns: list[Unresolved] = []
     reasons: list[str] = []
     assumptions: list[Any] = list(spec.assumptions)
     counterexamples: list[Counterexample] = []
@@ -266,23 +276,34 @@ def evaluate_obligation(obligation: Obligation, world: ProjectWorld, *, vocabula
     for element in population:
         resolved = resolve_property(element, property_name, vocabulary)
         if resolved is None or resolved[1] is None:
-            unknowns.append(element.element_id)
+            unknowns.append(Unresolved(
+                element.element_id,
+                DeterminationReason.MISSING_OBSERVATION.value,
+                _evidence_for(element, property_name, resolved[0] if resolved else None),
+                f"no value for property {property_name}",
+            ))
             if DeterminationReason.MISSING_OBSERVATION.value not in reasons:
                 reasons.append(DeterminationReason.MISSING_OBSERVATION.value)
             continue
         actual_property, observed = resolved
-        element_evidence = tuple(element.evidence_by_property.get(actual_property, element.evidence_by_property.get(property_name, ())))
+        element_evidence = _evidence_for(element, property_name, actual_property)
         try:
             outcome = _check_predicate(observed, obligation.predicate, expected_quantity, policy)
         except MeasurementError as error:
-            # An unresolved or incompatible unit is not a violation. The
-            # subject stays unevaluated rather than being decided numerically.
-            unknowns.append(f"{element.element_id}: {error}")
+            # An unresolved or incompatible unit is not a violation. The subject
+            # stays unevaluated rather than being decided numerically, and the
+            # evidence that was inspected is recorded as inspected.
+            unknowns.append(Unresolved(element.element_id, error.reason, element_evidence, str(error)))
             if error.reason not in reasons:
                 reasons.append(error.reason)
             continue
         except (TypeError, ValueError) as error:
-            unknowns.append(f"{element.element_id}: {error}")
+            unknowns.append(Unresolved(
+                element.element_id,
+                DeterminationReason.PREDICATE_NOT_EVALUABLE.value,
+                element_evidence,
+                str(error),
+            ))
             if DeterminationReason.PREDICATE_NOT_EVALUABLE.value not in reasons:
                 reasons.append(DeterminationReason.PREDICATE_NOT_EVALUABLE.value)
             continue

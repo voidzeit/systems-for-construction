@@ -18,9 +18,10 @@ class Proof:
     witnesses: tuple[str, ...]
     counterexamples: tuple[dict[str, Any], ...]
     contradictions: tuple[str, ...]
-    unknowns: tuple[str, ...]
+    unknowns: tuple[dict[str, Any], ...]
     assumptions: tuple[str, ...]
     result: str
+    inspected_evidence: tuple[str, ...] = ()
     reasons: tuple[str, ...] = ()
 
     @classmethod
@@ -38,7 +39,8 @@ class Proof:
             witnesses=tuple(item.subject for item in determination.counterexamples),
             counterexamples=tuple(item.to_dict() for item in determination.counterexamples),
             contradictions=determination.contradictions,
-            unknowns=determination.unknowns,
+            unknowns=tuple(item.to_dict() for item in determination.unknowns),
+            inspected_evidence=determination.inspected_evidence_ids,
             assumptions=determination.assumptions,
             result=determination.status.value,
             reasons=determination.reasons,
@@ -51,6 +53,7 @@ class Proof:
             "coverage": self.coverage,
             "claims": list(self.claims),
             "evidence": list(self.evidence),
+            "inspectedEvidence": list(self.inspected_evidence),
             "witnesses": list(self.witnesses),
             "counterexamples": list(self.counterexamples),
             "contradictions": list(self.contradictions),
