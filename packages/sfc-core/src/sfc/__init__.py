@@ -44,8 +44,8 @@ from .proofs import Proof
 from .conformance import ConformanceError, determination_violations, proof_violations, run_violations, validate_semantics
 from .governance import Review, ReviewDecision, ValueRecord, current_review
 from .ifc import load_ifc, parse_ifc_text
-from .events import Event, EventLog
-from .control_plane import ControlPlane, ReplayError
+from .events import KNOWN_EVENT_TYPES, Event, EventLog, ReplayError, owns_event
+from .control_plane import ControlPlane
 from .agent_runtime import AgentRuntime, CandidateFinding, InvestigationResult, RegisteredTool, ToolObservation
 from .providers import ProviderRequest, ProviderResponse, ToolCall
 from .requirements import RequirementCompilationError, compile_requirement
@@ -90,6 +90,8 @@ __all__ = [
     "CandidateFinding",
     "Event",
     "EventLog",
+    "KNOWN_EVENT_TYPES",
+    "owns_event",
     "InvestigationResult",
     "Obligation",
     "ProjectWorld",

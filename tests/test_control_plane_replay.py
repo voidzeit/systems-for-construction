@@ -90,7 +90,7 @@ class ReplayTests(unittest.TestCase):
             ControlPlane.from_events(self.log.read())
         self.assertIn("evidence", str(raised.exception))
 
-    def test_an_unrecognized_event_is_recorded_rather_than_dropped(self) -> None:
+    def test_an_event_another_projection_owns_is_recorded_rather_than_dropped(self) -> None:
         self.log.append(Event("evidence.added", "E-1", {"state": "pending_review"}))
         replayed = ControlPlane.from_events(self.log.read())
         self.assertEqual(len(replayed.unapplied_events), 1)

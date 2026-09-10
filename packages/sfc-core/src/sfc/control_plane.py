@@ -21,13 +21,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from .events import Event, EventLog
+from .events import CONTROL_PLANE_EVENT_TYPES, Event, EventLog, ReplayError, owns_event
 from .governance import Review, ReviewDecision, ValueRecord, current_review
 from .lifecycle import ObligationStatus, ValueStatus, WorkPackage, WorkPackageStatus, transition, OBLIGATION_TRANSITIONS
 
-
-class ReplayError(ValueError):
-    """Raised when an event log cannot be reduced into a valid state."""
+__all__ = ["ControlPlane", "ReplayError"]
 
 
 @dataclass
@@ -42,8 +40,10 @@ class ControlPlane:
     work_packages: dict[str, WorkPackage] = field(default_factory=dict)
     reviews: list[Review] = field(default_factory=list)
     values: dict[str, ValueRecord] = field(default_factory=dict)
-    #: Event types the reducer does not account for. Recorded rather than
-    #: dropped, so a log carrying events from another aggregate is visible.
+    #: Events another projection owns. Recorded rather than dropped, so a log
+    #: carrying an evidence room's history is visible here without being read
+    #: as control-plane state. An event type no projection owns is refused
+    #: outright; see ``sfc.events.owns_event``.
     unapplied_events: list[dict[str, Any]] = field(default_factory=list)
 
     def register_obligation(self, obligation_id: str) -> ObligationStatus:
@@ -101,17 +101,21 @@ class ControlPlane:
             self.event_log.append(Event(event_type, aggregate_id, payload, actor_id=actor_id))
 
     @classmethod
-    def from_events(cls, events: Iterable[dict[str, Any]], *, event_log: EventLog | None = None) -> "ControlPlane":
+    def from_events(cls, events: Iterable[dict[str, Any]], *, event_log: EventLog | None = None, strict: bool = True) -> "ControlPlane":
         """Rebuild derived state by reducing the append-only log.
 
         The replayed plane is built with no log attached, so replay never
         re-emits what it is reading. ``event_log`` is attached to the result for
-        subsequent live use.
+        subsequent live use. ``strict`` refuses a log containing an event type
+        this build does not know, rather than reducing it into a state that
+        silently omits whatever those events said.
         """
         plane = cls()
         for event in events:
             try:
-                plane._apply(event)
+                plane._apply(event, strict=strict)
+            except ReplayError:
+                raise
             except (KeyError, ValueError) as error:
                 raise ReplayError(
                     f"cannot replay {event.get('eventType')!r} for {event.get('aggregateId')!r}: {error}"
@@ -119,7 +123,10 @@ class ControlPlane:
         plane.event_log = event_log
         return plane
 
-    def _apply(self, event: dict[str, Any]) -> None:
+    def _apply(self, event: dict[str, Any], *, strict: bool = True) -> None:
+        if not owns_event(event, CONTROL_PLANE_EVENT_TYPES, strict=strict):
+            self.unapplied_events.append(event)
+            return
         event_type = str(event.get("eventType", ""))
         aggregate_id = str(event.get("aggregateId", ""))
         payload = event.get("payload", {}) or {}
@@ -143,8 +150,6 @@ class ControlPlane:
                 evidence_ids=tuple(payload.get("evidenceIds", [])),
                 actor_id=actor_id,
             )
-        else:
-            self.unapplied_events.append(event)
 
     def replay_matches(self, events: Iterable[dict[str, Any]]) -> bool:
         """Whether reducing the log reproduces this plane's derived state."""

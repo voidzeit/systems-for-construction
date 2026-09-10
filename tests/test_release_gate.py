@@ -1,4 +1,4 @@
-"""The SFC release gate: eleven claims, each asserted end to end.
+"""The SFC release gate: twelve claims, each asserted end to end.
 
 Each claim below is covered in depth by a focused suite. This file exists so
 the set can be read and run as one statement of what SFC guarantees, rather
@@ -14,6 +14,7 @@ than reconstructed from a test tree.
     AEC VOCABULARY            injected, not built into the kernel
     CLI                       behaves as an installed user sees it
     LOCAL-PRIVATE             enforced by property, not by name
+    EVENT LOG                 both projections rebuild, or the log is refused
     PUBLISHED RUN             every invariant and the schema hold
 """
 
@@ -207,6 +208,41 @@ class ReleaseGate(unittest.TestCase):
         self.assertIs(route.execution_scope, ExecutionScope.LOCAL)
         self.assertIs(route.data_residency, DataResidency.DEVICE)
         self.assertFalse(route.network_required)
+
+    def test_both_projections_rebuild_from_the_log_or_it_is_refused(self) -> None:
+        from sfc.control_plane import ControlPlane
+        from sfc.events import Event, EventLog, ReplayError
+        from sfc.evidence_room import EvidenceRoom, EvidenceState
+        from sfc.lifecycle import ObligationStatus
+        from sfc.models import Evidence, EvidenceSourceType
+
+        with TemporaryDirectory() as directory:
+            log = EventLog(Path(directory) / "events.jsonl")
+            plane = ControlPlane(event_log=log)
+            plane.register_obligation("OBL-1")
+            plane.advance_obligation("OBL-1", ObligationStatus.CLASSIFIED, "actor-1")
+            room = EvidenceRoom(event_log=log)
+            room.add_evidence(Evidence(
+                "E-1", "ifc:model-1", EvidenceSourceType.MODEL_ELEMENT,
+                {"elementId": "B-1"}, {"value": 1.0, "unit": "m"}, 0.9, 1.0, ("project-world",),
+            ))
+            room.submit_for_review("E-1")
+            room.admit("E-1", actor_id="reviewer-1")
+            events = log.read()
+
+            # One log, two projections, each rebuilt from it without reading
+            # the other as its own state.
+            self.assertTrue(plane.replay_matches(events))
+            self.assertTrue(room.replay_matches(events))
+            self.assertEqual(EvidenceRoom.from_events(events).get("E-1").state, EvidenceState.ADMITTED)
+
+            # And an event type this build cannot read is refused rather than
+            # reduced into a state that silently omits it.
+            log.append(Event("obligation.teleported", "OBL-1", {"to": "elsewhere"}))
+            for projection in (ControlPlane, EvidenceRoom):
+                with self.subTest(projection=projection.__name__):
+                    with self.assertRaises(ReplayError):
+                        projection.from_events(log.read())
 
     def test_a_published_run_satisfies_every_invariant_and_its_schema(self) -> None:
         from tests.conformance import schemas
