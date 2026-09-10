@@ -18,6 +18,14 @@ classifiers = [
   "Topic :: Scientific/Engineering",
 ]
 
+[project.optional-dependencies]
+# SFC Core is stdlib-only by ADR 0001. These are for the conformance gate and
+# the test runner, and are never imported by the runtime.
+dev = [
+  "jsonschema>=4.20",
+  "pytest>=8",
+]
+
 [project.scripts]
 sfc = "sfc.cli:main"
 sfc-mcp = "sfc.mcp:main"

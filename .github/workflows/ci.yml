@@ -15,7 +15,31 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - run: python -m pip install -e ".[dev]"
+      - name: Unit tests and domain invariants
+        run: python -m unittest discover -s tests -v
+      - name: Portable schema conformance
+        # The gate fails rather than skips when jsonschema is missing, so a
+        # broken install can never make schema drift look green.
+        env:
+          SFC_REQUIRE_CONFORMANCE: "1"
+        run: python -m unittest discover -s tests/conformance -t . -v
+      - name: Public surfaces
+        run: python -m sfc doctor
+
+  stdlib-only:
+    # The runtime must import and run a full determination with no third-party
+    # package installed at all.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - run: python -m pip install -e .
-      - run: python -m unittest discover -s tests -v
+      - name: Assert the runtime imports only the standard library
+        run: python -m unittest tests.test_stdlib_only -v
+      - name: A determination runs with nothing else installed
+        run: python -m sfc verify examples/electrical-panel-clearance/requirement.json examples/electrical-panel-clearance/project-world.json
       - run: python -m sfc doctor
 

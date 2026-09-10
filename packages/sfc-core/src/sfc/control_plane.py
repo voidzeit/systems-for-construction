@@ -38,7 +38,7 @@ class ControlPlane:
         if package.work_package_id in self.work_packages:
             raise ValueError(f"work package already exists: {package.work_package_id}")
         self.work_packages[package.work_package_id] = package
-        self._emit("work_package.created", package.work_package_id, package.__dict__)
+        self._emit("work_package.created", package.work_package_id, package.to_dict())
 
     def advance_work_package(self, work_package_id: str, target: WorkPackageStatus, actor_id: str) -> WorkPackage:
         package = self.work_packages[work_package_id]

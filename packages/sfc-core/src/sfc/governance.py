@@ -5,8 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import StrEnum
-from typing import Iterable
-import uuid
+from typing import Any, Iterable
 
 from .lifecycle import ValueStatus, VALUE_TRANSITIONS, transition
 
@@ -27,6 +26,29 @@ class Review:
     reason: str | None = None
     supersedes_review_id: str | None = None
 
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> "Review":
+        return cls(
+            review_id=value.get("reviewId", ""),
+            target_id=value.get("targetId", ""),
+            decision=ReviewDecision(value.get("decision", "accepted")),
+            reviewer_id=value.get("reviewerId", ""),
+            reviewed_at=value.get("reviewedAt", datetime.now(timezone.utc).isoformat()),
+            reason=value.get("reason"),
+            supersedes_review_id=value.get("supersedesReviewId"),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "reviewId": self.review_id,
+            "targetId": self.target_id,
+            "decision": self.decision.value,
+            "reviewerId": self.reviewer_id,
+            "reviewedAt": self.reviewed_at,
+            "reason": self.reason,
+            "supersedesReviewId": self.supersedes_review_id,
+        }
+
 
 def current_review(reviews: Iterable[Review], target_id: str) -> Review | None:
     """Calculate current review without mutating or deleting history."""
@@ -44,6 +66,27 @@ class ValueRecord:
     amount: float | None = None
     currency: str | None = None
     evidence_ids: tuple[str, ...] = ()
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> "ValueRecord":
+        return cls(
+            value_id=value.get("valueId", ""),
+            work_package_id=value.get("workPackageId"),
+            status=ValueStatus(value.get("status", "Unbudgeted")),
+            amount=value.get("amount"),
+            currency=value.get("currency"),
+            evidence_ids=tuple(value.get("evidenceIds", [])),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "valueId": self.value_id,
+            "workPackageId": self.work_package_id,
+            "status": self.status.value,
+            "amount": self.amount,
+            "currency": self.currency,
+            "evidenceIds": list(self.evidence_ids),
+        }
 
     def advance(self, target: ValueStatus, *, evidence_ids: tuple[str, ...] = ()) -> "ValueRecord":
         transition(self.status, target, VALUE_TRANSITIONS)

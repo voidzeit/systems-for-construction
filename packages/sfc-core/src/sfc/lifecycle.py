@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from enum import StrEnum
+from typing import Any
 
 
 class ObligationStatus(StrEnum):
@@ -81,6 +82,27 @@ class WorkPackage:
     status: WorkPackageStatus = WorkPackageStatus.PLANNED
     actor_id: str | None = None
     evidence_ids: tuple[str, ...] = ()
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> "WorkPackage":
+        return cls(
+            work_package_id=value.get("workPackageId", ""),
+            title=value.get("title", ""),
+            obligation_ids=tuple(value.get("obligationIds", [])),
+            status=WorkPackageStatus(value.get("status", "planned")),
+            actor_id=value.get("actorId"),
+            evidence_ids=tuple(value.get("evidenceIds", [])),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "workPackageId": self.work_package_id,
+            "title": self.title,
+            "obligationIds": list(self.obligation_ids),
+            "actorId": self.actor_id,
+            "status": self.status.value,
+            "evidenceIds": list(self.evidence_ids),
+        }
 
     def advance(self, target: WorkPackageStatus) -> "WorkPackage":
         transition(self.status, target, WORK_PACKAGE_TRANSITIONS)
