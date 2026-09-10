@@ -58,8 +58,12 @@ class AssuranceTests(unittest.TestCase):
         world = load_ifc(ROOT / "examples/ifc-panel-clearance/demo.ifc")
         self.assertEqual(world.project_id, "SFC-DEMO-PROJECT")
         self.assertEqual(len(world.elements), 2)
-        self.assertEqual(world.elements[0].properties["WorkingClearance"], 42)
-        self.assertEqual(world.elements[1].properties["WorkingClearance"], 29.4)
+        self.assertEqual(world.metadata["units"]["length"], "m")
+        self.assertEqual(
+            world.elements[0].properties["WorkingClearance"],
+            {"value": 1.0668, "unit": "m", "ifcType": "IFCLENGTHMEASURE", "provenance": "IFCUNITASSIGNMENT"},
+        )
+        self.assertEqual(world.elements[1].properties["WorkingClearance"]["value"], 0.74676)
         self.assertEqual(world.elements[0].geometry["placementRefs"], ["62"])
         self.assertEqual(world.elements[0].geometry["coordinates"], [0.0, 0.0, 0.0])
         self.assertEqual(len(world.relationships), 1)

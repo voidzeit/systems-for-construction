@@ -9,7 +9,7 @@ import re
 
 from .agent_runtime import AgentRuntime, InvestigationResult, RegisteredTool, ToolObservation
 from .agents import AgentPolicy
-from .assurance import evaluate_obligation, resolve_property
+from .assurance import evaluate_obligation, observe_measurement, resolve_property
 from .authority import EvidenceAuthority
 from .models import Evidence, EvidenceSourceType, Obligation, ProjectWorld, Determination, Run
 from .proofs import Proof
@@ -96,7 +96,17 @@ def investigate_and_publish(world: ProjectWorld, statement: str, *, store: RunSt
             continue
         actual_property, actual_value = resolved
         evidence_id = element.evidence_by_property.get(actual_property, (f"world:{element.element_id}:{actual_property}",))[0]
-        admitted.append(authority.admit(Evidence(evidence_id, element.source_id or world.project_id, EvidenceSourceType.MODEL_ELEMENT, {"elementId": element.element_id, "property": actual_property}, actual_value, 0.8, 1.0, ("project-world", f"snapshot:{world.snapshot_hash()}"))))
+        admitted.append(authority.admit(Evidence(
+            evidence_id,
+            element.source_id or world.project_id,
+            EvidenceSourceType.MODEL_ELEMENT,
+            {"elementId": element.element_id, "property": actual_property},
+            actual_value,
+            0.8,
+            1.0,
+            ("project-world", f"snapshot:{world.snapshot_hash()}"),
+            measurement=observe_measurement(actual_value, obligation),
+        )))
     proof = Proof.from_determination(determination)
     run_store = store or RunStore()
     frozen = run_store.freeze(world, obligation)

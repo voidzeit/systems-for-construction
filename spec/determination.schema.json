@@ -59,7 +59,36 @@
       "minimum": 0
     },
     "counterexamples": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "subject"
+        ],
+        "properties": {
+          "subject": {
+            "type": "string"
+          },
+          "observed": {},
+          "expected": {},
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "measurement": {
+            "$ref": "#/$defs/measurement"
+          }
+        },
+        "additionalProperties": false
+      }
     },
     "evidenceIds": {
       "type": "array",
@@ -76,8 +105,12 @@
     "assumptions": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
+        "type": [
+          "object",
+          "string"
+        ]
+      },
+      "description": "Recorded assumptions, such as a unit assumed under an explicit obligation policy."
     },
     "contradictions": {
       "type": "array",
@@ -136,5 +169,53 @@
       "additionalProperties": false
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "measurement": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "How a raw source value became the number that was compared.",
+      "properties": {
+        "rawValue": {
+          "type": "number"
+        },
+        "rawUnit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "normalizedValue": {
+          "type": "number"
+        },
+        "normalizedUnit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dimension": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conversion": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
 }

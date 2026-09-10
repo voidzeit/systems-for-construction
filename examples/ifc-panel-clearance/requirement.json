@@ -7,7 +7,15 @@
     "sourceId": "synthetic-ifc-requirements"
   },
   "quantifier": "ALL",
-  "population": {"kind": "electricdistributionboard"},
-  "predicate": {"property": "WorkingClearance", "operator": ">=", "value": 36},
+  "population": {
+    "kind": "electricdistributionboard",
+    "minimumExpected": 1
+  },
+  "predicate": {
+    "property": "WorkingClearance",
+    "operator": ">=",
+    "value": 36,
+    "unit": "in"
+  },
   "requiredEvidence": true
 }

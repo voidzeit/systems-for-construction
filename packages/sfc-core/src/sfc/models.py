@@ -43,6 +43,9 @@ class DeterminationReason(StrEnum):
     NOT_APPLICABLE_EVIDENCED = "NOT_APPLICABLE_EVIDENCED"
     MISSING_OBSERVATION = "MISSING_OBSERVATION"
     PREDICATE_NOT_EVALUABLE = "PREDICATE_NOT_EVALUABLE"
+    UNRESOLVED_MEASUREMENT_UNIT = "UNRESOLVED_MEASUREMENT_UNIT"
+    UNKNOWN_MEASUREMENT_UNIT = "UNKNOWN_MEASUREMENT_UNIT"
+    INCOMPATIBLE_MEASUREMENT_DIMENSION = "INCOMPATIBLE_MEASUREMENT_DIMENSION"
 
 
 class EmptyPopulationPolicy(StrEnum):
@@ -104,6 +107,7 @@ class Obligation:
     predicate: dict[str, Any]
     required_evidence: bool = True
     rule_set_version: str = "sfc-assurance-1"
+    measurement: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "Obligation":
@@ -121,6 +125,7 @@ class Obligation:
             predicate=dict(value.get("predicate", {})),
             required_evidence=bool(value.get("requiredEvidence", True)),
             rule_set_version=value.get("ruleSetVersion", "sfc-assurance-1"),
+            measurement=dict(value.get("measurement", {})),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -132,6 +137,7 @@ class Obligation:
             "predicate": self.predicate,
             "requiredEvidence": self.required_evidence,
             "ruleSetVersion": self.rule_set_version,
+            "measurement": self.measurement,
         }
 
 
@@ -269,6 +275,7 @@ class Evidence:
     freshness: str | None = None
     limitations: tuple[str, ...] = ()
     admitted: bool = False
+    measurement: dict[str, Any] | None = None
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "Evidence":
@@ -285,6 +292,7 @@ class Evidence:
             freshness=value.get("freshness"),
             limitations=tuple(value.get("limitations", [])),
             admitted=bool(value.get("admitted", False)),
+            measurement=value.get("measurement"),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -301,6 +309,7 @@ class Evidence:
             "timestamp": self.timestamp,
             "limitations": list(self.limitations),
             "admitted": self.admitted,
+            "measurement": self.measurement,
         }
 
 
@@ -311,10 +320,11 @@ class Counterexample:
     expected: Any
     evidence_ids: tuple[str, ...] = ()
     reason: str | None = None
+    measurement: dict[str, Any] | None = None
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "Counterexample":
-        return cls(value.get("subject", ""), value.get("observed"), value.get("expected"), tuple(value.get("evidenceIds", [])), value.get("reason"))
+        return cls(value.get("subject", ""), value.get("observed"), value.get("expected"), tuple(value.get("evidenceIds", [])), value.get("reason"), value.get("measurement"))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -323,6 +333,7 @@ class Counterexample:
             "expected": self.expected,
             "evidenceIds": list(self.evidence_ids),
             "reason": self.reason,
+            "measurement": self.measurement,
         }
 
 
@@ -339,7 +350,7 @@ class Determination:
     counterexamples: tuple[Counterexample, ...] = ()
     evidence_ids: tuple[str, ...] = ()
     unknowns: tuple[str, ...] = ()
-    assumptions: tuple[str, ...] = ()
+    assumptions: tuple[Any, ...] = ()
     contradictions: tuple[str, ...] = ()
     generated_at: str = field(default_factory=_utc_now)
     rule_set_version: str = "sfc-assurance-1"

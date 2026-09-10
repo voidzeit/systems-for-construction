@@ -1,6 +1,16 @@
 """Provider-neutral contracts and deterministic runtime for SFC."""
 
-from .assurance import AssuranceError, evaluate_obligation, validate_determination
+from .assurance import AssuranceError, MeasurementPolicy, evaluate_obligation, observe_measurement, validate_determination
+from .quantities import (
+    Conversion,
+    Dimension,
+    IncompatibleDimensionError,
+    MeasurementError,
+    Quantity,
+    UnknownUnitError,
+    UnresolvedUnitError,
+    resolve_unit,
+)
 from .authority import EvidenceAuthority, EvidenceAdmissionError
 from .models import (
     CLOSING_STATUSES,
@@ -47,6 +57,16 @@ __all__ = [
     "EvidenceAdmissionError",
     "EvidenceAuthority",
     "AssuranceError",
+    "Conversion",
+    "Dimension",
+    "IncompatibleDimensionError",
+    "MeasurementError",
+    "MeasurementPolicy",
+    "Quantity",
+    "UnknownUnitError",
+    "UnresolvedUnitError",
+    "observe_measurement",
+    "resolve_unit",
     "AgentRuntime",
     "CandidateFinding",
     "Event",

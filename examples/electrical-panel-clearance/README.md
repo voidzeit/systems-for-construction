@@ -2,10 +2,19 @@
 
 This synthetic fixture demonstrates the smallest complete SFC flow:
 
-- population: 18 electrical panels;
+- population: 18 electrical panels, `minimumExpected: 1`;
 - quantifier: `ALL`;
-- predicate: `working_clearance_inches >= 36`;
-- result: 17 conforming panels and one counterexample (`LP-18`, 29.4 inches).
+- predicate: `working_clearance >= 36 in`;
+- result: 17 conforming panels and one counterexample (`LP-18`, 29.4 in).
+
+The unit lives on the measurement, not in the property name. Each observation is
+a `{value, unit, provenance}` mapping, and the requirement declares the unit it
+is written in, so the comparison is between two measurements rather than two
+numbers. See ADR 0008.
+
+`minimumExpected: 1` states that the requirement presupposes at least one panel.
+Point the same requirement at a world with no panels and the determination is
+`INCOMPLETE` with reason `EMPTY_POPULATION_UNRESOLVED`, never `MET`. See ADR 0007.
 
 Run it from the repository root after installing the package:
 

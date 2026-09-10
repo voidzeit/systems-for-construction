@@ -39,10 +39,7 @@
           "type": "object"
         },
         "assumptions": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "type": "array"
         },
         "minimumExpected": {
           "type": "integer",
@@ -112,6 +109,13 @@
         },
         "maximum": {
           "type": "number"
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Unit the requirement is written in. Without it the predicate value is dimensionless and may only be compared against an observation that is also dimensionless."
         }
       },
       "additionalProperties": false
@@ -121,6 +125,30 @@
     },
     "ruleSetVersion": {
       "type": "string"
+    },
+    "measurement": {
+      "type": "object",
+      "properties": {
+        "assumeObservedUnit": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Unit to assume when an observation declares none. Recorded as an assumption on the determination."
+        },
+        "assumptionBasis": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "relativeTolerance": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit policy for unresolved measurements. Absent means no assumption is permitted."
     }
   },
   "$defs": {

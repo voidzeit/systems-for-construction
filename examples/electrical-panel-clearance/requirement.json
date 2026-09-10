@@ -7,8 +7,16 @@
     "sourceId": "synthetic-owner-requirements"
   },
   "quantifier": "ALL",
-  "population": {"kind": "electrical_panel"},
-  "predicate": {"property": "working_clearance_inches", "operator": ">=", "value": 36},
+  "population": {
+    "kind": "electrical_panel",
+    "minimumExpected": 1
+  },
+  "predicate": {
+    "property": "working_clearance",
+    "operator": ">=",
+    "value": 36,
+    "unit": "in"
+  },
   "requiredEvidence": true,
   "ruleSetVersion": "sfc-assurance-1"
 }

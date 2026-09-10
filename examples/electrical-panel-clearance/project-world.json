@@ -1,24 +1,317 @@
 {
   "projectId": "synthetic-electrical-demo",
-  "metadata": {"source": "synthetic fixture", "units": "imperial"},
+  "metadata": {
+    "source": "synthetic fixture",
+    "units": {
+      "length": "in"
+    }
+  },
   "elements": [
-    {"elementId": "LP-01", "kind": "electrical_panel", "properties": {"working_clearance_inches": 42}, "evidence": {"working_clearance_inches": ["E-LP-01"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-02", "kind": "electrical_panel", "properties": {"working_clearance_inches": 40}, "evidence": {"working_clearance_inches": ["E-LP-02"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-03", "kind": "electrical_panel", "properties": {"working_clearance_inches": 38}, "evidence": {"working_clearance_inches": ["E-LP-03"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-04", "kind": "electrical_panel", "properties": {"working_clearance_inches": 36}, "evidence": {"working_clearance_inches": ["E-LP-04"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-05", "kind": "electrical_panel", "properties": {"working_clearance_inches": 41}, "evidence": {"working_clearance_inches": ["E-LP-05"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-06", "kind": "electrical_panel", "properties": {"working_clearance_inches": 37}, "evidence": {"working_clearance_inches": ["E-LP-06"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-07", "kind": "electrical_panel", "properties": {"working_clearance_inches": 39}, "evidence": {"working_clearance_inches": ["E-LP-07"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-08", "kind": "electrical_panel", "properties": {"working_clearance_inches": 44}, "evidence": {"working_clearance_inches": ["E-LP-08"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-09", "kind": "electrical_panel", "properties": {"working_clearance_inches": 36}, "evidence": {"working_clearance_inches": ["E-LP-09"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-10", "kind": "electrical_panel", "properties": {"working_clearance_inches": 43}, "evidence": {"working_clearance_inches": ["E-LP-10"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-11", "kind": "electrical_panel", "properties": {"working_clearance_inches": 40}, "evidence": {"working_clearance_inches": ["E-LP-11"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-12", "kind": "electrical_panel", "properties": {"working_clearance_inches": 37}, "evidence": {"working_clearance_inches": ["E-LP-12"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-13", "kind": "electrical_panel", "properties": {"working_clearance_inches": 45}, "evidence": {"working_clearance_inches": ["E-LP-13"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-14", "kind": "electrical_panel", "properties": {"working_clearance_inches": 38}, "evidence": {"working_clearance_inches": ["E-LP-14"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-15", "kind": "electrical_panel", "properties": {"working_clearance_inches": 42}, "evidence": {"working_clearance_inches": ["E-LP-15"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-16", "kind": "electrical_panel", "properties": {"working_clearance_inches": 36}, "evidence": {"working_clearance_inches": ["E-LP-16"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-17", "kind": "electrical_panel", "properties": {"working_clearance_inches": 39}, "evidence": {"working_clearance_inches": ["E-LP-17"]}, "sourceId": "synthetic-model"},
-    {"elementId": "LP-18", "kind": "electrical_panel", "properties": {"working_clearance_inches": 29.4}, "evidence": {"working_clearance_inches": ["E-LP-18"]}, "sourceId": "synthetic-model"}
+    {
+      "elementId": "LP-01",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 42,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-01"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-02",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 40,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-02"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-03",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 38,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-03"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-04",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 36,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-04"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-05",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 41,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-05"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-06",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 37,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-06"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-07",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 39,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-07"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-08",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 44,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-08"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-09",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 36,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-09"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-10",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 43,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-10"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-11",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 40,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-11"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-12",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 37,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-12"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-13",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 45,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-13"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-14",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 38,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-14"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-15",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 42,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-15"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-16",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 36,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-16"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-17",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 39,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-17"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    },
+    {
+      "elementId": "LP-18",
+      "kind": "electrical_panel",
+      "properties": {
+        "working_clearance": {
+          "value": 29.4,
+          "unit": "in",
+          "provenance": "synthetic fixture schedule"
+        }
+      },
+      "evidence": {
+        "working_clearance": [
+          "E-LP-18"
+        ]
+      },
+      "sourceId": "synthetic-model"
+    }
   ]
 }

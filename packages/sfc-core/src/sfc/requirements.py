@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from typing import Any
 import re
 
 from .models import Obligation, Quantifier, Requirement
+from .quantities import UnknownUnitError, resolve_unit
 
 
 class RequirementCompilationError(ValueError):
@@ -31,12 +33,7 @@ def _kind(subject: str) -> str:
 
 def _property(name: str) -> str:
     normalized = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
-    aliases = {
-        "working_clearance": "working_clearance_inches",
-        "working_clearance_inches": "working_clearance_inches",
-        "clearance": "clearance",
-    }
-    return aliases.get(normalized, normalized)
+    return normalized
 
 
 def compile_requirement(statement: str, *, requirement_id: str = "REQ-COMPILED-001", title: str | None = None) -> Obligation:
@@ -51,12 +48,21 @@ def compile_requirement(statement: str, *, requirement_id: str = "REQ-COMPILED-0
     if value.is_integer():
         value = int(value)
     operator = groups.get("operator") or ">="
+    try:
+        unit = resolve_unit(groups.get("unit"))
+    except UnknownUnitError as error:
+        # The controlled language refuses rather than guessing what was meant.
+        raise RequirementCompilationError(str(error)) from error
     requirement = Requirement(requirement_id, title or text, text)
+    predicate: dict[str, Any] = {"property": property_name, "operator": operator, "value": value}
+    if unit is not None:
+        # The unit belongs to the measurement, never to the property name.
+        predicate["unit"] = unit
     return Obligation(
         obligation_id=f"OBL-{requirement_id}",
         requirement=requirement,
         quantifier=Quantifier.ALL,
-        population={"kind": subject},
-        predicate={"property": property_name, "operator": operator, "value": value},
+        population={"kind": subject, "minimumExpected": 1},
+        predicate=predicate,
     )
 

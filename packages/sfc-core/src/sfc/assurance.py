@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from operator import eq, ge, gt, le, lt, ne
 from typing import Any, Callable
 import re
 
+from .quantities import (
+    Conversion,
+    MeasurementError,
+    Quantity,
+    DEFAULT_RELATIVE_TOLERANCE,
+    compare_values,
+    normalize_for_comparison,
+    resolve_unit,
+)
 from .models import (
     CLOSING_STATUSES,
     Counterexample,
@@ -81,19 +91,92 @@ def _matches_population(element: Any, spec: PopulationSpec) -> bool:
 def resolve_property(element: Any, requested: str) -> tuple[str, Any] | None:
     if requested in element.properties:
         return requested, element.properties[requested]
+    # Punctuation and case are syntactic noise, so WorkingClearance still
+    # resolves working_clearance. A unit suffix is not noise: it is a claim
+    # about the measurement, and it belongs to the value.
     normalize = lambda value: re.sub(r"[^a-z0-9]", "", value.lower())
-    wanted = normalize(requested).removesuffix("inches")
+    wanted = normalize(requested)
     for name, value in element.properties.items():
-        if normalize(name).removesuffix("inches") == wanted:
+        if normalize(name) == wanted:
             return name, value
     return None
 
 
-def _check_predicate(observed: Any, predicate: dict[str, Any]) -> bool:
+@dataclass(frozen=True)
+class MeasurementPolicy:
+    """What an obligation permits when an observation carries no unit."""
+
+    assumed_unit: str | None = None
+    assumption_basis: str | None = None
+    relative_tolerance: float = DEFAULT_RELATIVE_TOLERANCE
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any] | None) -> "MeasurementPolicy":
+        value = value or {}
+        return cls(
+            assumed_unit=resolve_unit(value.get("assumeObservedUnit")),
+            assumption_basis=value.get("assumptionBasis"),
+            relative_tolerance=float(value.get("relativeTolerance", DEFAULT_RELATIVE_TOLERANCE)),
+        )
+
+
+@dataclass(frozen=True)
+class _Outcome:
+    conforms: bool
+    observed: Any
+    expected: Any
+    measurement: dict[str, Any] | None = None
+    assumption: dict[str, Any] | None = None
+
+
+def _check_predicate(
+    observed: Any,
+    predicate: dict[str, Any],
+    expected_quantity: Quantity | None = None,
+    policy: MeasurementPolicy | None = None,
+) -> _Outcome:
+    """Decide one subject, keeping units attached to both sides of the comparison.
+
+    Values that are not measurements — booleans, labels — are compared directly.
+    Measurements are normalized into the unit the requirement is written in, and
+    a comparison that would cross an unresolved or incompatible unit raises
+    instead of producing a number.
+    """
     operator = predicate.get("operator", "==")
     if operator not in OPERATORS:
         raise ValueError(f"unsupported predicate operator: {operator}")
-    return OPERATORS[operator](observed, predicate.get("value"))
+    policy = policy or MeasurementPolicy()
+    observed_quantity = Quantity.parse(observed)
+    if observed_quantity is None or expected_quantity is None:
+        return _Outcome(
+            conforms=OPERATORS[operator](observed, predicate.get("value")),
+            observed=observed,
+            expected=f"{operator} {predicate.get('value')}",
+        )
+    assumption: dict[str, Any] | None = None
+    if not observed_quantity.resolved and expected_quantity.resolved and policy.assumed_unit:
+        # An assumption is only permitted because the obligation declared it, and
+        # it is recorded so a reviewer sees the determination did not measure it.
+        observed_quantity = Quantity(observed_quantity.value, policy.assumed_unit, provenance="assumed")
+        assumption = {
+            "kind": "unit_assumption",
+            "property": predicate.get("property"),
+            "assumedUnit": policy.assumed_unit,
+            "basis": policy.assumption_basis or "declared by the obligation measurement policy",
+        }
+    conversion = normalize_for_comparison(observed_quantity, expected_quantity)
+    return _Outcome(
+        conforms=compare_values(
+            conversion.normalized.value,
+            operator,
+            expected_quantity.value,
+            relative_tolerance=policy.relative_tolerance,
+        ),
+        observed=observed_quantity.to_dict(),
+        expected=f"{operator} {expected_quantity}",
+        measurement=conversion.to_dict(),
+        assumption=assumption,
+    )
 
 
 def _empty_population_determination(obligation: Obligation, spec: PopulationSpec) -> Determination:
@@ -141,12 +224,14 @@ def evaluate_obligation(obligation: Obligation, world: ProjectWorld) -> Determin
         return _empty_population_determination(obligation, spec)
 
     property_name = obligation.predicate.get("property")
-    expected = obligation.predicate.get("value")
+    policy = MeasurementPolicy.from_dict(obligation.measurement)
+    expected_quantity = Quantity.parse(obligation.predicate.get("value"), obligation.predicate.get("unit"))
     evaluated = 0
     conforming = 0
     evidence_ids: list[str] = []
     unknowns: list[str] = []
     reasons: list[str] = []
+    assumptions: list[Any] = list(spec.assumptions)
     counterexamples: list[Counterexample] = []
 
     for element in population:
@@ -159,7 +244,14 @@ def evaluate_obligation(obligation: Obligation, world: ProjectWorld) -> Determin
         actual_property, observed = resolved
         element_evidence = tuple(element.evidence_by_property.get(actual_property, element.evidence_by_property.get(property_name, ())))
         try:
-            conforms = _check_predicate(observed, obligation.predicate)
+            outcome = _check_predicate(observed, obligation.predicate, expected_quantity, policy)
+        except MeasurementError as error:
+            # An unresolved or incompatible unit is not a violation. The
+            # subject stays unevaluated rather than being decided numerically.
+            unknowns.append(f"{element.element_id}: {error}")
+            if error.reason not in reasons:
+                reasons.append(error.reason)
+            continue
         except (TypeError, ValueError) as error:
             unknowns.append(f"{element.element_id}: {error}")
             if DeterminationReason.PREDICATE_NOT_EVALUABLE.value not in reasons:
@@ -169,16 +261,19 @@ def evaluate_obligation(obligation: Obligation, world: ProjectWorld) -> Determin
         # determination never rests on evidence for a subject it could not decide.
         evaluated += 1
         evidence_ids.extend(element_evidence)
-        if conforms:
+        if outcome.assumption is not None and outcome.assumption not in assumptions:
+            assumptions.append(outcome.assumption)
+        if outcome.conforms:
             conforming += 1
         else:
             counterexamples.append(
                 Counterexample(
                     subject=element.element_id,
-                    observed=observed,
-                    expected=f"{obligation.predicate.get('operator', '==')} {expected}",
+                    observed=outcome.observed,
+                    expected=outcome.expected,
                     evidence_ids=element_evidence,
                     reason=f"property {property_name} does not satisfy predicate",
+                    measurement=outcome.measurement,
                 )
             )
 
@@ -209,7 +304,7 @@ def evaluate_obligation(obligation: Obligation, world: ProjectWorld) -> Determin
         counterexamples=tuple(counterexamples),
         evidence_ids=tuple(dict.fromkeys(evidence_ids)),
         unknowns=tuple(unknowns),
-        assumptions=tuple(spec.assumptions),
+        assumptions=tuple(assumptions),
         reasons=tuple(reasons),
         rule_set_version=obligation.rule_set_version,
     )
@@ -271,3 +366,25 @@ def _quantifier_status(
             return DeterminationStatus.INCOMPLETE
         return DeterminationStatus.MET
     raise ValueError(f"unsupported quantifier: {quantifier}")
+
+
+def observe_measurement(value: Any, obligation: Obligation) -> dict[str, Any] | None:
+    """The measurement audit for a raw observation, in the obligation's unit.
+
+    Returns None when the value is not a measurement, or when the units cannot
+    be reconciled — in which case the determination will have recorded the
+    subject as unevaluated rather than compared it.
+    """
+    observed = Quantity.parse(value)
+    if observed is None:
+        return None
+    expected = Quantity.parse(obligation.predicate.get("value"), obligation.predicate.get("unit"))
+    if expected is None:
+        return Conversion(observed, observed).to_dict()
+    policy = MeasurementPolicy.from_dict(obligation.measurement)
+    if not observed.resolved and expected.resolved and policy.assumed_unit:
+        observed = Quantity(observed.value, policy.assumed_unit, provenance="assumed")
+    try:
+        return normalize_for_comparison(observed, expected).to_dict()
+    except MeasurementError:
+        return None
