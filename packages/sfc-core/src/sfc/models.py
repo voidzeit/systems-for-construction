@@ -20,9 +20,36 @@ class Quantifier(StrEnum):
 class DeterminationStatus(StrEnum):
     MET = "MET"
     NOT_MET = "NOT_MET"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
     UNKNOWN = "UNKNOWN"
     INCOMPLETE = "INCOMPLETE"
     STALE = "STALE"
+
+
+#: Statuses that close a requirement. Everything else leaves it open.
+CLOSING_STATUSES = frozenset({
+    DeterminationStatus.MET,
+    DeterminationStatus.NOT_MET,
+    DeterminationStatus.NOT_APPLICABLE,
+})
+
+
+class DeterminationReason(StrEnum):
+    """Machine-readable codes explaining why a determination reached its status."""
+
+    EMPTY_POPULATION_UNRESOLVED = "EMPTY_POPULATION_UNRESOLVED"
+    EMPTY_POPULATION_APPLICABILITY_UNEVIDENCED = "EMPTY_POPULATION_APPLICABILITY_UNEVIDENCED"
+    POPULATION_BELOW_MINIMUM = "POPULATION_BELOW_MINIMUM"
+    NOT_APPLICABLE_EVIDENCED = "NOT_APPLICABLE_EVIDENCED"
+    MISSING_OBSERVATION = "MISSING_OBSERVATION"
+    PREDICATE_NOT_EVALUABLE = "PREDICATE_NOT_EVALUABLE"
+
+
+class EmptyPopulationPolicy(StrEnum):
+    """What an author declares an empty population is allowed to mean."""
+
+    INCOMPLETE = "incomplete"
+    NOT_APPLICABLE = "not_applicable"
 
 
 class EvidenceSourceType(StrEnum):
@@ -106,6 +133,63 @@ class Obligation:
             "requiredEvidence": self.required_evidence,
             "ruleSetVersion": self.rule_set_version,
         }
+
+
+@dataclass(frozen=True)
+class Applicability:
+    """Whether a requirement applies at all, and what evidences that."""
+
+    applicable: bool | None = None
+    evidence_ids: tuple[str, ...] = ()
+    basis: str | None = None
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any] | None) -> "Applicability":
+        value = value or {}
+        applicable = value.get("applicable")
+        return cls(
+            applicable=None if applicable is None else bool(applicable),
+            evidence_ids=tuple(value.get("evidenceIds", [])),
+            basis=value.get("basis"),
+        )
+
+    @property
+    def proven_not_applicable(self) -> bool:
+        """Non-applicability only counts when the absence itself is evidenced."""
+        return self.applicable is False and bool(self.evidence_ids)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"applicable": self.applicable, "evidenceIds": list(self.evidence_ids), "basis": self.basis}
+
+
+@dataclass(frozen=True)
+class PopulationSpec:
+    """The parsed subject-selection half of an obligation.
+
+    ``minimum_expected`` and ``empty_population_policy`` exist so that an author
+    can state how many subjects the requirement presupposes. A population that
+    falls short of that never closes, because SFC cannot tell an inapplicable
+    requirement apart from a model that failed to load the relevant discipline.
+    """
+
+    kind: str | None = None
+    where: dict[str, Any] = field(default_factory=dict)
+    minimum_expected: int = 0
+    empty_population_policy: EmptyPopulationPolicy = EmptyPopulationPolicy.INCOMPLETE
+    applicability: Applicability = field(default_factory=Applicability)
+    assumptions: tuple[Any, ...] = ()
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any] | None) -> "PopulationSpec":
+        value = value or {}
+        return cls(
+            kind=value.get("kind"),
+            where=dict(value.get("where", {})),
+            minimum_expected=max(0, int(value.get("minimumExpected", 0))),
+            empty_population_policy=EmptyPopulationPolicy(value.get("emptyPopulationPolicy", "incomplete")),
+            applicability=Applicability.from_dict(value.get("applicability")),
+            assumptions=tuple(value.get("assumptions", [])),
+        )
 
 
 @dataclass(frozen=True)
@@ -250,7 +334,7 @@ class Determination:
     expected_population: int
     evaluated_population: int
     conforming: int
-    coverage: float
+    coverage: float | None
     status: DeterminationStatus
     counterexamples: tuple[Counterexample, ...] = ()
     evidence_ids: tuple[str, ...] = ()
@@ -259,6 +343,8 @@ class Determination:
     contradictions: tuple[str, ...] = ()
     generated_at: str = field(default_factory=_utc_now)
     rule_set_version: str = "sfc-assurance-1"
+    reasons: tuple[str, ...] = ()
+    applicability: dict[str, Any] | None = None
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "Determination":
@@ -270,7 +356,7 @@ class Determination:
             int(population.get("expected", 0)),
             int(population.get("evaluated", 0)),
             int(value.get("conforming", 0)),
-            float(value.get("coverage", 0.0)),
+            None if value.get("coverage") is None else float(value["coverage"]),
             DeterminationStatus(value.get("determination", "UNKNOWN")),
             tuple(Counterexample.from_dict(item) for item in value.get("counterexamples", [])),
             tuple(value.get("evidenceIds", [])),
@@ -279,6 +365,8 @@ class Determination:
             tuple(value.get("contradictions", [])),
             value.get("generatedAt", _utc_now()),
             value.get("ruleSetVersion", "sfc-assurance-1"),
+            tuple(value.get("reasons", [])),
+            value.get("applicability"),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -298,6 +386,8 @@ class Determination:
             "assumptions": list(self.assumptions),
             "contradictions": list(self.contradictions),
             "determination": self.status.value,
+            "reasons": list(self.reasons),
+            "applicability": self.applicability,
             "generatedAt": self.generated_at,
             "ruleSetVersion": self.rule_set_version,
         }

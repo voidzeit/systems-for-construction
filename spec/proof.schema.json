@@ -4,19 +4,66 @@
   "title": "SFC Proof",
   "description": "A structured, auditable proof object derived from admitted evidence.",
   "type": "object",
-  "required": ["requirementId", "population", "coverage", "claims", "evidence", "result"],
+  "required": [
+    "requirementId",
+    "population",
+    "coverage",
+    "claims",
+    "evidence",
+    "result"
+  ],
   "properties": {
-    "requirementId": {"type": "string"},
-    "population": {"type": "object"},
-    "coverage": {"type": "number", "minimum": 0, "maximum": 1},
-    "claims": {"type": "array"},
-    "evidence": {"type": "array"},
-    "witnesses": {"type": "array"},
-    "counterexamples": {"type": "array"},
-    "contradictions": {"type": "array"},
-    "unknowns": {"type": "array"},
-    "assumptions": {"type": "array"},
-    "result": {"enum": ["MET", "NOT_MET", "UNKNOWN", "INCOMPLETE", "STALE"]}
+    "requirementId": {
+      "type": "string"
+    },
+    "population": {
+      "type": "object"
+    },
+    "coverage": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "claims": {
+      "type": "array"
+    },
+    "evidence": {
+      "type": "array"
+    },
+    "witnesses": {
+      "type": "array"
+    },
+    "counterexamples": {
+      "type": "array"
+    },
+    "contradictions": {
+      "type": "array"
+    },
+    "unknowns": {
+      "type": "array"
+    },
+    "assumptions": {
+      "type": "array"
+    },
+    "result": {
+      "enum": [
+        "MET",
+        "NOT_MET",
+        "NOT_APPLICABLE",
+        "UNKNOWN",
+        "INCOMPLETE",
+        "STALE"
+      ]
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
   },
   "additionalProperties": false
 }

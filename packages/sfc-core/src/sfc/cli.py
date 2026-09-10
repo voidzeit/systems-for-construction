@@ -10,7 +10,7 @@ import sys
 
 from .assurance import evaluate_obligation
 from .io import load_obligation, load_world, read_json, write_json
-from .models import Determination, DeterminationStatus
+from .models import CLOSING_STATUSES, Determination, Evidence
 from .runtime import RunStore, create_run
 from .support import create_support_bundle
 from .bench import run_benchmark
@@ -18,7 +18,6 @@ from .ifc import load_ifc
 from .reporting import write_report
 from .server import serve
 from .authority import EvidenceAuthority, EvidenceAdmissionError
-from .models import Evidence
 from .pdf import load_pdf
 from .investigation import investigate_and_publish
 from .http_providers import provider_from_environment
@@ -140,7 +139,7 @@ def _verify(args: argparse.Namespace) -> int:
     write_json(args.output, output)
     print(json.dumps(output, ensure_ascii=False, indent=2))
     print(f"Published {run.run_id} to {path}")
-    return 0 if determination.status in {DeterminationStatus.MET, DeterminationStatus.NOT_MET} else 1
+    return 0 if determination.status in CLOSING_STATUSES else 1
 
 
 def _inspect(args: argparse.Namespace) -> int:
@@ -207,7 +206,7 @@ def _investigate(args: argparse.Namespace) -> int:
     }
     write_json(args.output, result)
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0 if publication.determination.status in {DeterminationStatus.MET, DeterminationStatus.NOT_MET} else 1
+    return 0 if publication.determination.status in CLOSING_STATUSES else 1
 
 
 def _bench(args: argparse.Namespace) -> int:

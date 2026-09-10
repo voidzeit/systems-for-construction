@@ -3,22 +3,138 @@
   "$id": "https://systemsforconstruction.org/spec/determination.schema.json",
   "title": "SFC Determination",
   "type": "object",
-  "required": ["requirementId", "obligationId", "quantifier", "population", "coverage", "conforming", "determination"],
+  "required": [
+    "requirementId",
+    "obligationId",
+    "quantifier",
+    "population",
+    "coverage",
+    "conforming",
+    "determination"
+  ],
   "properties": {
-    "requirementId": {"type": "string"},
-    "obligationId": {"type": "string"},
-    "quantifier": {"enum": ["ALL", "ANY", "NONE", "COUNT"]},
-    "population": {"type": "object", "required": ["expected", "evaluated"], "properties": {"expected": {"type": "integer", "minimum": 0}, "evaluated": {"type": "integer", "minimum": 0}}, "additionalProperties": false},
-    "coverage": {"type": "number", "minimum": 0, "maximum": 1},
-    "conforming": {"type": "integer", "minimum": 0},
-    "counterexamples": {"type": "array"},
-    "evidenceIds": {"type": "array", "items": {"type": "string"}},
-    "unknowns": {"type": "array", "items": {"type": "string"}},
-    "assumptions": {"type": "array", "items": {"type": "string"}},
-    "contradictions": {"type": "array", "items": {"type": "string"}},
-    "determination": {"enum": ["MET", "NOT_MET", "UNKNOWN", "INCOMPLETE", "STALE"]},
-    "generatedAt": {"type": "string"},
-    "ruleSetVersion": {"type": "string"}
+    "requirementId": {
+      "type": "string"
+    },
+    "obligationId": {
+      "type": "string"
+    },
+    "quantifier": {
+      "enum": [
+        "ALL",
+        "ANY",
+        "NONE",
+        "COUNT"
+      ]
+    },
+    "population": {
+      "type": "object",
+      "required": [
+        "expected",
+        "evaluated"
+      ],
+      "properties": {
+        "expected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evaluated": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Fraction of the expected population that was evaluated. Null when no population exists: absent, not zero."
+    },
+    "conforming": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "counterexamples": {
+      "type": "array"
+    },
+    "evidenceIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "contradictions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "determination": {
+      "enum": [
+        "MET",
+        "NOT_MET",
+        "NOT_APPLICABLE",
+        "UNKNOWN",
+        "INCOMPLETE",
+        "STALE"
+      ]
+    },
+    "generatedAt": {
+      "type": "string"
+    },
+    "ruleSetVersion": {
+      "type": "string"
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Machine-readable codes explaining a non-obvious status, notably why an empty population did not close."
+    },
+    "applicability": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "applicable": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "basis": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
   },
   "additionalProperties": false
 }

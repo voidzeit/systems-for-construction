@@ -3,10 +3,16 @@
 from .assurance import AssuranceError, evaluate_obligation, validate_determination
 from .authority import EvidenceAuthority, EvidenceAdmissionError
 from .models import (
+    CLOSING_STATUSES,
+    Applicability,
     Counterexample,
     Determination,
+    DeterminationReason,
+    DeterminationStatus,
+    EmptyPopulationPolicy,
     Evidence,
     Obligation,
+    PopulationSpec,
     ProjectWorld,
     Requirement,
     Run,
@@ -28,7 +34,13 @@ from .reality import RealityComparison, RealityObservation, compare_position
 from .activity import ActionTask, activity_feed, derive_tasks
 
 __all__ = [
+    "CLOSING_STATUSES",
+    "Applicability",
     "Counterexample",
+    "DeterminationReason",
+    "DeterminationStatus",
+    "EmptyPopulationPolicy",
+    "PopulationSpec",
     "ControlPlane",
     "Determination",
     "Evidence",

@@ -3,16 +3,153 @@
   "$id": "https://systemsforconstruction.org/spec/obligation.schema.json",
   "title": "SFC Obligation",
   "type": "object",
-  "required": ["obligationId", "requirement", "quantifier", "population", "predicate"],
+  "required": [
+    "obligationId",
+    "requirement",
+    "quantifier",
+    "population",
+    "predicate"
+  ],
   "properties": {
-    "obligationId": {"type": "string", "minLength": 1},
-    "requirement": {"$ref": "#/$defs/requirement"},
-    "quantifier": {"enum": ["ALL", "ANY", "NONE", "COUNT"]},
-    "population": {"type": "object", "required": ["kind"], "properties": {"kind": {"type": "string"}, "where": {"type": "object"}, "assumptions": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": true},
-    "predicate": {"type": "object", "required": ["property", "operator", "value"], "properties": {"property": {"type": "string"}, "operator": {"enum": ["==", "!=", ">=", ">", "<=", "<"]}, "value": {}, "minimum": {"type": "number"}, "maximum": {"type": "number"}}, "additionalProperties": false},
-    "requiredEvidence": {"type": "boolean"},
-    "ruleSetVersion": {"type": "string"}
+    "obligationId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requirement": {
+      "$ref": "#/$defs/requirement"
+    },
+    "quantifier": {
+      "enum": [
+        "ALL",
+        "ANY",
+        "NONE",
+        "COUNT"
+      ]
+    },
+    "population": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "where": {
+          "type": "object"
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "minimumExpected": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many subjects the requirement presupposes. A smaller population never closes."
+        },
+        "emptyPopulationPolicy": {
+          "enum": [
+            "incomplete",
+            "not_applicable"
+          ],
+          "default": "incomplete",
+          "description": "Declared meaning of an empty population. It never bypasses the applicability evidence requirement."
+        },
+        "applicability": {
+          "type": "object",
+          "properties": {
+            "applicable": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "evidenceIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "basis": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "description": "An empty population may close only when non-applicability is itself evidenced."
+        }
+      },
+      "additionalProperties": true
+    },
+    "predicate": {
+      "type": "object",
+      "required": [
+        "property",
+        "operator",
+        "value"
+      ],
+      "properties": {
+        "property": {
+          "type": "string"
+        },
+        "operator": {
+          "enum": [
+            "==",
+            "!=",
+            ">=",
+            ">",
+            "<=",
+            "<"
+          ]
+        },
+        "value": {},
+        "minimum": {
+          "type": "number"
+        },
+        "maximum": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "requiredEvidence": {
+      "type": "boolean"
+    },
+    "ruleSetVersion": {
+      "type": "string"
+    }
   },
-  "$defs": {"requirement": {"type": "object", "required": ["requirementId", "title", "statement"], "properties": {"requirementId": {"type": "string"}, "title": {"type": "string"}, "statement": {"type": "string"}, "sourceId": {"type": ["string", "null"]}}, "additionalProperties": false}},
+  "$defs": {
+    "requirement": {
+      "type": "object",
+      "required": [
+        "requirementId",
+        "title",
+        "statement"
+      ],
+      "properties": {
+        "requirementId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "statement": {
+          "type": "string"
+        },
+        "sourceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
   "additionalProperties": false
 }

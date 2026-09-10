@@ -40,7 +40,8 @@ def run_benchmark(root: str | Path) -> dict[str, Any]:
         truth = json.loads(truth_path.read_text(encoding="utf-8"))
         expected_status = truth.get("status")
         result["metrics"]["accuracy"] = 1.0 if expected_status == determination.status.value else 0.0
-        result["metrics"]["falseClosureRate"] = 1.0 if determination.status.value == "MET" and expected_status != "MET" else 0.0
+        closed = determination.status.value in {"MET", "NOT_APPLICABLE"}
+        result["metrics"]["falseClosureRate"] = 1.0 if closed and expected_status != determination.status.value else 0.0
         expected_evidence = set(truth.get("expectedEvidenceIds", []))
         predicted_evidence = set(determination.evidence_ids)
         if expected_evidence or predicted_evidence:

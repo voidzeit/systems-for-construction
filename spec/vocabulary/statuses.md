@@ -1,5 +1,25 @@
 # SFC status vocabulary
 
+## Determination
+
+`MET`, `NOT_MET`, `NOT_APPLICABLE`, `INCOMPLETE`, `UNKNOWN`, `STALE`
+
+`MET`, `NOT_MET` and `NOT_APPLICABLE` close a requirement; the rest leave it
+open. `NOT_APPLICABLE` is not a form of compliance: it records that the
+requirement was excluded, and it is reachable only when the population is empty
+*and* the non-applicability is itself evidenced. See ADR 0007.
+
+Every non-obvious status carries machine-readable `reasons`:
+
+| Reason | Meaning |
+| --- | --- |
+| `EMPTY_POPULATION_UNRESOLVED` | Nothing matched the population and applicability is unresolved. |
+| `EMPTY_POPULATION_APPLICABILITY_UNEVIDENCED` | The author declared the `not_applicable` policy but cited no evidence. |
+| `POPULATION_BELOW_MINIMUM` | Fewer subjects than `minimumExpected` were found. |
+| `NOT_APPLICABLE_EVIDENCED` | Non-applicability is evidenced, so the empty population closes. |
+| `MISSING_OBSERVATION` | A subject carried no value for the requested property. |
+| `PREDICATE_NOT_EVALUABLE` | A value existed but the predicate could not be applied to it. |
+
 ## Obligation
 
 `discovered → classified → accepted → allocated → in_progress → claimed_satisfied → verified → approved`

@@ -12,7 +12,7 @@ from .models import Determination
 class Proof:
     requirement_id: str
     population: dict[str, int]
-    coverage: float
+    coverage: float | None
     claims: tuple[dict[str, Any], ...]
     evidence: tuple[str, ...]
     witnesses: tuple[str, ...]
@@ -21,6 +21,7 @@ class Proof:
     unknowns: tuple[str, ...]
     assumptions: tuple[str, ...]
     result: str
+    reasons: tuple[str, ...] = ()
 
     @classmethod
     def from_determination(cls, determination: Determination) -> "Proof":
@@ -40,6 +41,7 @@ class Proof:
             unknowns=determination.unknowns,
             assumptions=determination.assumptions,
             result=determination.status.value,
+            reasons=determination.reasons,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -55,5 +57,6 @@ class Proof:
             "unknowns": list(self.unknowns),
             "assumptions": list(self.assumptions),
             "result": self.result,
+            "reasons": list(self.reasons),
         }
 
