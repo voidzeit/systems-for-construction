@@ -4,7 +4,7 @@ Each claim below is covered in depth by a focused suite. This file exists so
 the set can be read and run as one statement of what SFC guarantees, rather
 than reconstructed from a test tree.
 
-    EMPTY POPULATION          never MET without evidenced applicability
+    EMPTY POPULATION          never MET, and never covered, without evidence
     UNKNOWN UNIT              never numerically compared
     CONVERTIBLE UNITS         deterministically normalized
     INCOMPATIBLE DIMENSIONS   comparison rejected
@@ -70,6 +70,9 @@ class ReleaseGate(unittest.TestCase):
         # And the invariant holds at the publication boundary, not just here.
         with self.assertRaises(AssuranceError):
             validate_determination(_met_on_nothing())
+        # Nor may a document claim it covered a population it never established.
+        with self.assertRaises(AssuranceError):
+            validate_determination(_evaluated_all_of_nothing())
 
     def test_unknown_unit_is_never_numerically_compared(self) -> None:
         determination = evaluate_obligation(Obligation("O", population={"kind": "board"}, **BOARD), _world(29.4))
@@ -185,6 +188,22 @@ class ReleaseGate(unittest.TestCase):
                 store.publish(run)
             # The canonical pointer never moved.
             self.assertIsNone(store.load_canonical())
+
+
+def _evaluated_all_of_nothing():
+    """A determination stating a coverage fraction over an empty population."""
+    from sfc.models import Determination
+
+    return Determination(
+        requirement_id="REQ-1",
+        obligation_id="OBL-1",
+        quantifier=Quantifier.ALL,
+        expected_population=0,
+        evaluated_population=0,
+        conforming=0,
+        coverage=1.0,
+        status=DeterminationStatus.INCOMPLETE,
+    )
 
 
 def _met_on_nothing():

@@ -266,6 +266,32 @@ class FixtureDirectionTests(unittest.TestCase):
                    "reviewerId": "r1", "reviewedAt": "2026-01-01T00:00:00Z", "unexpected": True}
         self.assertFalse(schemas.validator("review.schema.json").is_valid(fixture))
 
+    def test_the_schema_rejects_coverage_over_an_empty_population(self) -> None:
+        # The portable contract, not only the Python validator, refuses to
+        # represent a fraction of a population that was never established.
+        base = {"requirementId": "R", "obligationId": "O", "quantifier": "ALL",
+                "population": {"expected": 0, "evaluated": 0}, "conforming": 0,
+                "determination": "INCOMPLETE"}
+        validator = schemas.validator("determination.schema.json")
+        self.assertTrue(validator.is_valid({**base, "coverage": None}))
+        self.assertFalse(validator.is_valid({**base, "coverage": 1.0}))
+        self.assertFalse(validator.is_valid({**base, "coverage": 0.0}))
+
+    def test_the_schema_requires_coverage_over_a_non_empty_population(self) -> None:
+        base = {"requirementId": "R", "obligationId": "O", "quantifier": "ALL",
+                "population": {"expected": 2, "evaluated": 2}, "conforming": 2,
+                "determination": "MET"}
+        validator = schemas.validator("determination.schema.json")
+        self.assertTrue(validator.is_valid({**base, "coverage": 1.0}))
+        self.assertFalse(validator.is_valid({**base, "coverage": None}))
+
+    def test_the_proof_schema_carries_the_same_coverage_rule(self) -> None:
+        base = {"requirementId": "R", "population": {"expected": 0, "evaluated": 0},
+                "claims": [], "evidence": [], "result": "INCOMPLETE"}
+        validator = schemas.validator("proof.schema.json")
+        self.assertTrue(validator.is_valid({**base, "coverage": None}))
+        self.assertFalse(validator.is_valid({**base, "coverage": 1.0}))
+
     def test_a_vacuous_determination_is_rejected_by_the_schema_status_enum(self) -> None:
         fixture = {"requirementId": "R", "obligationId": "O", "quantifier": "ALL",
                    "population": {"expected": 0, "evaluated": 0}, "coverage": None,

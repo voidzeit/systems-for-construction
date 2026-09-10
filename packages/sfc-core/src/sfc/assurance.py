@@ -46,6 +46,11 @@ class AssuranceError(ValueError):
     """Raised when a determination violates an SFC invariant."""
 
 
+#: Coverage is published rounded, so the invariant that binds it to the
+#: population it measures is checked to the precision it is written at.
+COVERAGE_TOLERANCE = 1e-6
+
+
 def validate_determination(determination: Determination) -> None:
     if determination.expected_population < 0 or determination.evaluated_population < 0:
         raise AssuranceError("population counts cannot be negative")
@@ -56,8 +61,21 @@ def validate_determination(determination: Determination) -> None:
     if determination.coverage is None:
         if determination.expected_population:
             raise AssuranceError("coverage is required when a population exists")
-    elif not 0 <= determination.coverage <= 1:
-        raise AssuranceError("coverage must be between 0 and 1")
+    else:
+        if not determination.expected_population:
+            # A fraction of an unestablished population is not a measurement.
+            # Admitting one would let a document claim it evaluated all of
+            # nothing, which is the empty-population hole reopened from the
+            # publication side rather than the evaluation side.
+            raise AssuranceError("coverage must be absent when the population is empty")
+        if not 0 <= determination.coverage <= 1:
+            raise AssuranceError("coverage must be between 0 and 1")
+        stated = determination.evaluated_population / determination.expected_population
+        if abs(determination.coverage - stated) > COVERAGE_TOLERANCE:
+            raise AssuranceError(
+                f"coverage {determination.coverage} does not describe "
+                f"{determination.evaluated_population} of {determination.expected_population} subjects"
+            )
     if determination.status is DeterminationStatus.MET:
         if determination.expected_population == 0:
             raise AssuranceError("MET requires a non-empty population; absence is not compliance")

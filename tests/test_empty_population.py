@@ -118,6 +118,39 @@ class DeterminationInvariantTests(unittest.TestCase):
                 coverage=None,
             ))
 
+    def test_an_empty_population_cannot_state_coverage(self) -> None:
+        # The hole the evaluator no longer produces, arriving from outside it:
+        # a document that claims it evaluated all of nothing.
+        for stated in (0.0, 0.5, 1.0):
+            with self.subTest(coverage=stated):
+                with self.assertRaises(AssuranceError) as raised:
+                    validate_determination(self._determination(
+                        status=DeterminationStatus.INCOMPLETE,
+                        coverage=stated,
+                    ))
+                self.assertIn("population is empty", str(raised.exception))
+
+    def test_coverage_must_describe_the_population_it_measures(self) -> None:
+        with self.assertRaises(AssuranceError) as raised:
+            validate_determination(self._determination(
+                status=DeterminationStatus.INCOMPLETE,
+                expected_population=10,
+                evaluated_population=1,
+                coverage=1.0,
+            ))
+        self.assertIn("1 of 10", str(raised.exception))
+
+    def test_coverage_is_accepted_at_the_precision_it_is_published_at(self) -> None:
+        # One of three is not exactly representable, so the invariant has to
+        # hold for the rounded value the contract actually carries.
+        validate_determination(self._determination(
+            status=DeterminationStatus.INCOMPLETE,
+            expected_population=3,
+            evaluated_population=1,
+            conforming=1,
+            coverage=0.333333,
+        ))
+
 
 if __name__ == "__main__":
     unittest.main()

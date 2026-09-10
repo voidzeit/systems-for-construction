@@ -17,7 +17,22 @@
       "type": "string"
     },
     "population": {
-      "type": "object"
+      "type": "object",
+      "required": [
+        "expected",
+        "evaluated"
+      ],
+      "properties": {
+        "expected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evaluated": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
     },
     "coverage": {
       "type": [
@@ -72,5 +87,64 @@
       "description": "Evidence looked at without supporting the conclusion."
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "title": "An empty population cannot carry a coverage fraction",
+      "description": "Coverage is the fraction of the population that was evaluated. With no established population there is no fraction to state, and a stated one would assert that all of nothing was evaluated.",
+      "if": {
+        "type": "object",
+        "required": [
+          "population"
+        ],
+        "properties": {
+          "population": {
+            "required": [
+              "expected"
+            ],
+            "properties": {
+              "expected": {
+                "const": 0
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "coverage": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "title": "A non-empty population must state its coverage",
+      "if": {
+        "type": "object",
+        "required": [
+          "population"
+        ],
+        "properties": {
+          "population": {
+            "required": [
+              "expected"
+            ],
+            "properties": {
+              "expected": {
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "coverage": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  ]
 }
