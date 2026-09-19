@@ -62,6 +62,16 @@ python -m sfc gateway --port 8790
 python -m sfc.mcp
 ```
 
+Grouped aliases are additive and keep the flat commands compatible:
+
+```bash
+python -m sfc project inspect examples/electrical-panel-clearance/project-world.json
+python -m sfc requirements check examples/electrical-panel-clearance/requirement.json examples/electrical-panel-clearance/project-world.json
+python -m sfc work inspect examples/work-unit-feeder/work-unit.json
+python -m sfc plugins inspect examples/plugin-reference-electrical/plugin.json
+python -m sfc plugins list --path examples/plugin-reference-electrical
+```
+
 The `reference` investigation provider is deterministic and offline. Use
 `--provider environment` to select an HTTP adapter through `SFC_PROVIDER`,
 `SFC_MODEL` and the matching provider credential environment variable.
