@@ -1,0 +1,57 @@
+{
+  "pluginId": "sfc.assurance.owner-requirements.reference",
+  "name": "SFC Owner Requirements Reference Contract",
+  "version": "0.1.0",
+  "contractVersion": "1",
+  "family": "assurance",
+  "domain": "requirements",
+  "capabilities": [
+    {
+      "capabilityId": "assurance.requirement.inspect",
+      "inputContract": "Obligation",
+      "outputContract": "Claims",
+      "preconditions": [],
+      "sideEffects": [],
+      "riskClass": "low",
+      "minimumAuthority": null,
+      "maximumAutonomy": "A1",
+      "acceptanceContract": null
+    },
+    {
+      "capabilityId": "assurance.requirement.determine",
+      "inputContract": "Obligation+ProjectWorld+Evidence",
+      "outputContract": "Determination",
+      "preconditions": [
+        "authority and applicability represented"
+      ],
+      "sideEffects": [],
+      "riskClass": "medium",
+      "minimumAuthority": null,
+      "maximumAutonomy": "A2",
+      "acceptanceContract": "SFC determination contract"
+    }
+  ],
+  "inputs": [
+    "obligations",
+    "project_world",
+    "evidence"
+  ],
+  "outputs": [
+    "claims",
+    "determinations",
+    "work_candidates"
+  ],
+  "permissions": [
+    "project.read",
+    "evidence.read"
+  ],
+  "sideEffects": [],
+  "autonomyCeiling": "A2",
+  "evidenceContract": "SFC evidence contract",
+  "acceptanceContract": "SFC determination contract",
+  "runtimeRequirements": [],
+  "compatibility": [
+    "reference contract; advanced compilation/applicability intelligence not included"
+  ],
+  "dataRightsBehavior": "source and evidence rights remain explicit"
+}

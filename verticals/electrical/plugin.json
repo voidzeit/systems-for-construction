@@ -1,0 +1,56 @@
+{
+  "pluginId": "sfc.domain.electrical.reference",
+  "name": "SFC Electrical Reference Domain Pack",
+  "version": "0.1.0",
+  "contractVersion": "1",
+  "family": "domain_pack",
+  "domain": "electrical",
+  "capabilities": [
+    {
+      "capabilityId": "electrical.inspect",
+      "inputContract": "ProjectWorld",
+      "outputContract": "Claims",
+      "preconditions": [],
+      "sideEffects": [],
+      "riskClass": "low",
+      "minimumAuthority": null,
+      "maximumAutonomy": "A1",
+      "acceptanceContract": null
+    },
+    {
+      "capabilityId": "electrical.verify",
+      "inputContract": "Requirement+Evidence",
+      "outputContract": "Determination",
+      "preconditions": [
+        "applicable population established"
+      ],
+      "sideEffects": [],
+      "riskClass": "medium",
+      "minimumAuthority": null,
+      "maximumAutonomy": "A2",
+      "acceptanceContract": "SFC determination contract"
+    }
+  ],
+  "inputs": [
+    "project",
+    "requirements",
+    "evidence"
+  ],
+  "outputs": [
+    "claims",
+    "determinations"
+  ],
+  "permissions": [
+    "project.read",
+    "evidence.read"
+  ],
+  "sideEffects": [],
+  "autonomyCeiling": "A2",
+  "evidenceContract": "SFC evidence contract",
+  "acceptanceContract": "SFC determination contract",
+  "runtimeRequirements": [],
+  "compatibility": [
+    "reference semantics only"
+  ],
+  "dataRightsBehavior": "no customer-specific learning included"
+}

@@ -1,0 +1,64 @@
+{
+  "pluginId": "sfc.connector.revit",
+  "name": "SFC Revit Connector Contract",
+  "version": "0.1.0",
+  "contractVersion": "1",
+  "family": "connector",
+  "domain": "aec",
+  "capabilities": [
+    {
+      "capabilityId": "revit.project.extract",
+      "inputContract": null,
+      "outputContract": "ProjectWorld",
+      "preconditions": [
+        "Revit document open"
+      ],
+      "sideEffects": [],
+      "riskClass": "low",
+      "minimumAuthority": null,
+      "maximumAutonomy": "A0",
+      "acceptanceContract": null
+    },
+    {
+      "capabilityId": "revit.element.set_parameter",
+      "inputContract": "Action",
+      "outputContract": "Evidence",
+      "preconditions": [
+        "authorized document transaction"
+      ],
+      "sideEffects": [
+        "model.write"
+      ],
+      "riskClass": "medium",
+      "minimumAuthority": "project.editor",
+      "maximumAutonomy": "A5",
+      "acceptanceContract": "post-action validation"
+    }
+  ],
+  "inputs": [
+    "revit.document"
+  ],
+  "outputs": [
+    "project_world",
+    "evidence",
+    "action_result"
+  ],
+  "permissions": [
+    "project.read",
+    "model.read",
+    "model.write"
+  ],
+  "sideEffects": [
+    "model.write"
+  ],
+  "autonomyCeiling": "A5",
+  "evidenceContract": "SFC evidence contract",
+  "acceptanceContract": "transaction validation",
+  "runtimeRequirements": [
+    "Autodesk Revit adapter"
+  ],
+  "compatibility": [
+    "connector contract only; deployable add-in not claimed"
+  ],
+  "dataRightsBehavior": "project policy governs extraction and mutation"
+}
