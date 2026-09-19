@@ -55,6 +55,7 @@ from .evidence_room import DocumentState, DocumentVersion, EvidenceEnvelope, Evi
 from .readiness import ReadinessContribution, ReadinessReport, compute_readiness
 from .reality import RealityComparison, RealityObservation, compare_position
 from .activity import ActionTask, activity_feed, derive_tasks
+from .work import WorkUnit, WorkUnitStatus, WORK_UNIT_TRANSITIONS
 
 __all__ = [
     "__version__",
@@ -142,6 +143,9 @@ __all__ = [
     "ActionTask",
     "activity_feed",
     "derive_tasks",
+    "WorkUnit",
+    "WorkUnitStatus",
+    "WORK_UNIT_TRANSITIONS",
     "ValueRecord",
     "WorldElement",
     "current_review",

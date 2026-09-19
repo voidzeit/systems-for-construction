@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://systemsforconstruction.org/spec/plugin.schema.json",
+  "title": "SFC Plugin Manifest",
+  "type": "object",
+  "required": [
+    "pluginId",
+    "name",
+    "version",
+    "contractVersion",
+    "family",
+    "domain",
+    "capabilities",
+    "permissions",
+    "sideEffects",
+    "autonomyCeiling"
+  ],
+  "properties": {
+    "pluginId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "contractVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "family": {
+      "enum": [
+        "connector",
+        "domain_pack",
+        "assurance",
+        "production",
+        "generative",
+        "intelligence"
+      ]
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "capabilityId",
+          "riskClass",
+          "maximumAutonomy"
+        ],
+        "properties": {
+          "capabilityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "inputContract": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "outputContract": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "preconditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sideEffects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "riskClass": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ]
+          },
+          "minimumAuthority": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "maximumAutonomy": {
+            "enum": [
+              "A0",
+              "A1",
+              "A2",
+              "A3",
+              "A4",
+              "A5",
+              "A6"
+            ]
+          },
+          "acceptanceContract": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sideEffects": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "autonomyCeiling": {
+      "enum": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ]
+    },
+    "evidenceContract": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "acceptanceContract": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "runtimeRequirements": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "compatibility": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "dataRightsBehavior": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

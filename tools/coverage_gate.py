@@ -44,6 +44,7 @@ KERNEL_MODULES = (
     "conformance.py",    # the document invariants at the publication boundary
     "authority.py",      # what makes candidate evidence official
     "control_plane.py",  # governed transitions, and replay of them
+    "work.py",           # Work Unit contract and lifecycle semantics
     "evidence_room.py",  # evidence and document lifecycle, and replay of it
     "events.py",         # the event registry that makes replay fail closed
     "models.py",         # the contracts themselves
