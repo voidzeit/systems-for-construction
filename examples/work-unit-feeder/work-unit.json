@@ -1,0 +1,32 @@
+{
+  "workUnitId": "WU-FEEDER-001",
+  "projectId": "P-REFERENCE",
+  "workPackageId": "WP-FEEDERS-L03",
+  "capabilityId": "electrical.route.feeder",
+  "scope": "Route feeder from MSB-01 to P-L03-04",
+  "discipline": "electrical",
+  "location": "L03",
+  "requirementIds": [
+    "R-CLEARANCE-001"
+  ],
+  "inputIds": [
+    "WORLD-001"
+  ],
+  "dependencyIds": [],
+  "executorId": null,
+  "expectedOutput": "Validated feeder-route candidate",
+  "acceptanceCriteria": [
+    "continuous source-to-destination route",
+    "required clearance maintained"
+  ],
+  "qaCriteria": [
+    "no critical spatial conflict"
+  ],
+  "evidenceIds": [],
+  "estimatedEffortHours": null,
+  "actualEffortHours": null,
+  "computeCost": null,
+  "cost": null,
+  "state": "created",
+  "blockedReason": null
+}

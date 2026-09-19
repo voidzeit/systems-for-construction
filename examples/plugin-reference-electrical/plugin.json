@@ -1,0 +1,37 @@
+{
+  "pluginId": "sfc.reference.electrical",
+  "name": "SFC Reference Electrical",
+  "version": "0.1.0",
+  "contractVersion": "1",
+  "family": "domain_pack",
+  "domain": "electrical",
+  "capabilities": [
+    {
+      "capabilityId": "electrical.inspect",
+      "inputContract": null,
+      "outputContract": null,
+      "preconditions": [],
+      "sideEffects": [],
+      "riskClass": "low",
+      "minimumAuthority": null,
+      "maximumAutonomy": "A1",
+      "acceptanceContract": null
+    }
+  ],
+  "inputs": [
+    "project"
+  ],
+  "outputs": [
+    "claims"
+  ],
+  "permissions": [
+    "project.read"
+  ],
+  "sideEffects": [],
+  "autonomyCeiling": "A1",
+  "evidenceContract": null,
+  "acceptanceContract": null,
+  "runtimeRequirements": [],
+  "compatibility": [],
+  "dataRightsBehavior": null
+}

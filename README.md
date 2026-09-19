@@ -4,14 +4,14 @@
 
 Construction information is fragmented across models, drawings, schedules, project systems and financial systems. AI can reason over pieces of that information, but engineering decisions need evidence, provenance and deterministic authority.
 
-SFC is an open-source runtime for connecting obligations, work, agents, project evidence and governed determinations across the construction lifecycle.
+SFC is an open-source runtime for connecting obligations, work, engineering intelligence, project evidence and governed determinations across the construction lifecycle.
 
 ```text
 Obligation
     ↓
 Project World
     ↓
-Engineering Agent
+Engineering Intelligence
     ↓
 Candidate Evidence
     ↓
@@ -62,6 +62,16 @@ python -m sfc gateway --port 8790
 python -m sfc.mcp
 ```
 
+Grouped aliases are additive and keep the flat commands compatible:
+
+```bash
+python -m sfc project inspect examples/electrical-panel-clearance/project-world.json
+python -m sfc requirements check examples/electrical-panel-clearance/requirement.json examples/electrical-panel-clearance/project-world.json
+python -m sfc work inspect examples/work-unit-feeder/work-unit.json
+python -m sfc plugins inspect examples/plugin-reference-electrical/plugin.json
+python -m sfc plugins list --path examples/plugin-reference-electrical
+```
+
 The `reference` investigation provider is deterministic and offline. Use
 `--provider environment` to select an HTTP adapter through `SFC_PROVIDER`,
 `SFC_MODEL` and the matching provider credential environment variable.
@@ -99,6 +109,7 @@ The core does not import FastAPI, SQLAlchemy, Autodesk SDKs, cloud SDKs or a mod
 - Candidate evidence is not admitted evidence.
 - Absence of evidence is not evidence of absence.
 - Agents may investigate and propose, but they cannot publish or approve.
+- SFC orchestrates work, not agents: agents, models and tools are replaceable executors of governed Work Units.
 - A failed run cannot replace the last valid canonical publication.
 - Every fact has provenance, and every determination identifies its population and coverage.
 - Missing measurements stay missing. They are never reported as zero.

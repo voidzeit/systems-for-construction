@@ -24,6 +24,7 @@ from typing import Any, Iterable
 from .events import CONTROL_PLANE_EVENT_TYPES, Event, EventLog, ReplayError, owns_event
 from .governance import Review, ReviewDecision, ValueRecord, current_review
 from .lifecycle import ObligationStatus, ValueStatus, WorkPackage, WorkPackageStatus, transition, OBLIGATION_TRANSITIONS
+from .work import WorkUnit, WorkUnitStatus
 
 __all__ = ["ControlPlane", "ReplayError"]
 
@@ -38,6 +39,7 @@ class ControlPlane:
     event_log: EventLog | None = None
     obligation_states: dict[str, ObligationStatus] = field(default_factory=dict)
     work_packages: dict[str, WorkPackage] = field(default_factory=dict)
+    work_units: dict[str, WorkUnit] = field(default_factory=dict)
     reviews: list[Review] = field(default_factory=list)
     values: dict[str, ValueRecord] = field(default_factory=dict)
     #: Events another projection owns. Recorded rather than dropped, so a log
@@ -71,6 +73,33 @@ class ControlPlane:
         updated = package.advance(target)
         self.work_packages[work_package_id] = updated
         self._emit("work_package.transitioned", work_package_id, {"from": package.status.value, "to": target.value}, actor_id)
+        return updated
+
+    def add_work_unit(self, work_unit: WorkUnit) -> None:
+        if work_unit.work_unit_id in self.work_units:
+            raise ValueError(f"work unit already exists: {work_unit.work_unit_id}")
+        if work_unit.work_package_id not in self.work_packages:
+            raise ValueError(f"unknown work package: {work_unit.work_package_id}")
+        self.work_units[work_unit.work_unit_id] = work_unit
+        self._emit("work_unit.created", work_unit.work_unit_id, work_unit.to_dict())
+
+    def advance_work_unit(
+        self,
+        work_unit_id: str,
+        target: WorkUnitStatus,
+        actor_id: str,
+        *,
+        blocked_reason: str | None = None,
+    ) -> WorkUnit:
+        work_unit = self.work_units[work_unit_id]
+        updated = work_unit.advance(target, blocked_reason=blocked_reason)
+        self.work_units[work_unit_id] = updated
+        self._emit(
+            "work_unit.transitioned",
+            work_unit_id,
+            {"from": work_unit.state.value, "to": target.value, "blockedReason": updated.blocked_reason},
+            actor_id,
+        )
         return updated
 
     def add_review(self, review: Review) -> Review:
@@ -139,6 +168,10 @@ class ControlPlane:
             self.add_work_package(WorkPackage.from_dict(payload))
         elif event_type == "work_package.transitioned":
             self.advance_work_package(aggregate_id, WorkPackageStatus(payload["to"]), actor_id or "")
+        elif event_type == "work_unit.created":
+            self.add_work_unit(WorkUnit.from_dict(payload))
+        elif event_type == "work_unit.transitioned":
+            self.advance_work_unit(aggregate_id, WorkUnitStatus(payload["to"]), actor_id or "", blocked_reason=payload.get("blockedReason"))
         elif event_type == "review.added":
             self.add_review(Review.from_dict(payload))
         elif event_type == "value.created":
@@ -160,6 +193,7 @@ class ControlPlane:
         return {
             "obligations": {key: value.value for key, value in sorted(self.obligation_states.items())},
             "workPackages": {key: value.to_dict() for key, value in sorted(self.work_packages.items())},
+            "workUnits": {key: value.to_dict() for key, value in sorted(self.work_units.items())},
             "reviews": [review.to_dict() for review in self.reviews],
             "values": {key: value.to_dict() for key, value in sorted(self.values.items())},
         }

@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://systemsforconstruction.org/spec/work-unit.schema.json",
+  "title": "SFC Work Unit",
+  "type": "object",
+  "required": [
+    "workUnitId",
+    "projectId",
+    "workPackageId",
+    "capabilityId",
+    "scope",
+    "requirementIds",
+    "inputIds",
+    "dependencyIds",
+    "acceptanceCriteria",
+    "qaCriteria",
+    "evidenceIds",
+    "state"
+  ],
+  "properties": {
+    "workUnitId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "projectId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workPackageId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capabilityId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 1
+    },
+    "discipline": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "location": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "requirementIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "inputIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "dependencyIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "executorId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "expectedOutput": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "acceptanceCriteria": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "qaCriteria": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidenceIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "estimatedEffortHours": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "actualEffortHours": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "computeCost": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "cost": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "state": {
+      "enum": [
+        "created",
+        "ready",
+        "running",
+        "blocked",
+        "retry",
+        "cancelled",
+        "machine_qa",
+        "human_review",
+        "correction",
+        "escalated",
+        "accepted",
+        "delivered",
+        "learned"
+      ]
+    },
+    "blockedReason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "blocked"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "blockedReason"
+        ],
+        "properties": {
+          "blockedReason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

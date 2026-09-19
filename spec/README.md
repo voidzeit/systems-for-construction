@@ -91,7 +91,7 @@ schema fixture -> python object -> JSON -> schema          (fixture direction)
 The suite covers the example obligations, a compiled obligation, determinations
 in every closing and non-closing state, the published run on disk and at the
 canonical pointer, proofs, admitted evidence with its measurement audit, reviews,
-values, work packages, and every event the reference control plane emits. It also
+values, work packages, work units, plugin manifests, and every event the reference control plane emits. It also
 checks that each schema is a valid Draft 2020-12 document, declares an `$id`
 matching its filename, and that cross-file `$ref`s resolve.
 
@@ -108,3 +108,12 @@ third-party package installed. In CI the conformance job sets
 `SFC_REQUIRE_CONFORMANCE=1`, which makes a missing `jsonschema` a failure rather
 than a skip, so schema drift can never pass unnoticed.
 
+
+
+## Work and capability extension contracts
+
+`work-unit.schema.json` is the portable unit-of-production contract. It names the package, capability, dependencies, executor, expected output, acceptance/QA criteria, evidence and lifecycle state without prescribing how work is scheduled or optimized.
+
+`plugin.schema.json` is the open manifest boundary for a capability provider. The manifest declares identity, family, domain, permissions, side effects, autonomy ceiling and evidence/acceptance contracts. It deliberately does not publish private routing weights, customer-specific heuristics or learned production intelligence.
+
+These contracts follow the repository knowledge-exposure rule: **open contract, private advantage**.
