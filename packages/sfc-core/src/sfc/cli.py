@@ -25,6 +25,8 @@ from .http_providers import provider_from_environment
 from .gateway import serve_gateway
 from .readiness import compute_readiness
 from .vocabulary import Vocabulary, default_vocabulary
+from .work import WorkUnit
+from .plugins import PluginManifest, discover_plugin_manifests
 
 
 def _add_vocabulary_option(parser: argparse.ArgumentParser) -> None:
@@ -135,6 +137,45 @@ def build_parser() -> argparse.ArgumentParser:
     server.add_argument("--port", type=int, default=8787)
     server.add_argument("--studio", type=Path, help="Studio HTML document; defaults to the repository copy or SFC_STUDIO_PATH")
 
+    # Grouped command families are additive aliases over the stable flat CLI.
+    # The flat commands remain supported so scripts and published examples do
+    # not break while the domain vocabulary matures.
+    project = sub.add_parser("project", help="project-state commands")
+    project_sub = project.add_subparsers(dest="project_command", required=True)
+    project_inspect = project_sub.add_parser("inspect", help="inspect a Project World")
+    project_inspect.add_argument("project_world", type=Path)
+
+    requirements = sub.add_parser("requirements", help="requirement and determination commands")
+    requirements_sub = requirements.add_subparsers(dest="requirements_command", required=True)
+    requirements_check = requirements_sub.add_parser("check", help="evaluate an obligation against a Project World")
+    requirements_check.add_argument("requirement", type=Path)
+    requirements_check.add_argument("project_world", type=Path)
+    requirements_check.add_argument("--output", type=Path, default=Path(".sfc/last-run.json"))
+    requirements_check.add_argument("--store", type=Path, default=Path(".sfc"))
+    _add_vocabulary_option(requirements_check)
+
+    work = sub.add_parser("work", help="inspect governed Work Unit contracts")
+    work_sub = work.add_subparsers(dest="work_command", required=True)
+    work_inspect = work_sub.add_parser("inspect", help="inspect and normalize a Work Unit JSON document")
+    work_inspect.add_argument("work_unit", type=Path)
+
+    ai = sub.add_parser("ai", help="engineering-intelligence commands")
+    ai_sub = ai.add_subparsers(dest="ai_command", required=True)
+    ai_investigate = ai_sub.add_parser("investigate", help="run a bounded requirement investigation")
+    ai_investigate.add_argument("source", type=Path)
+    ai_investigate.add_argument("--statement", required=True)
+    ai_investigate.add_argument("--output", type=Path, default=Path(".sfc/investigation.json"))
+    ai_investigate.add_argument("--store", type=Path, default=Path(".sfc"))
+    ai_investigate.add_argument("--provider", choices=["reference", "environment"], default="reference")
+    _add_vocabulary_option(ai_investigate)
+
+    plugins = sub.add_parser("plugins", help="inspect SFC plugin manifests")
+    plugins_sub = plugins.add_subparsers(dest="plugins_command", required=True)
+    plugins_list = plugins_sub.add_parser("list", help="list plugin manifests in a directory")
+    plugins_list.add_argument("--path", type=Path, default=Path(".sfc/plugins"))
+    plugins_inspect = plugins_sub.add_parser("inspect", help="inspect and validate a plugin manifest")
+    plugins_inspect.add_argument("manifest", type=Path)
+
     gateway = sub.add_parser("gateway", help="serve the local SFC AI Gateway")
     gateway.add_argument("--host", default="127.0.0.1")
     gateway.add_argument("--port", type=int, default=8790)
@@ -181,8 +222,40 @@ def _dispatch(args: argparse.Namespace) -> int:
     if args.command == "serve":
         serve(args.world, args.run, args.host, args.port, evidence_path=args.evidence, event_path=args.events, studio=args.studio)
         return 0
+    if args.command == "project":
+        if args.project_command == "inspect":
+            return _inspect(args)
+    if args.command == "requirements":
+        if args.requirements_command == "check":
+            return _verify(args)
+    if args.command == "work":
+        if args.work_command == "inspect":
+            return _work_inspect(args)
+    if args.command == "ai":
+        if args.ai_command == "investigate":
+            return _investigate(args)
+    if args.command == "plugins":
+        return _plugins(args)
     if args.command == "gateway":
         serve_gateway(host=args.host, port=args.port, ledger_path=args.ledger)
+        return 0
+    return 2
+
+
+def _work_inspect(args: argparse.Namespace) -> int:
+    work = WorkUnit.from_dict(read_json(args.work_unit))
+    print(json.dumps(work.to_dict(), ensure_ascii=False, indent=2))
+    return 0
+
+
+def _plugins(args: argparse.Namespace) -> int:
+    if args.plugins_command == "list":
+        manifests = [manifest.to_dict() for manifest in discover_plugin_manifests(args.path)]
+        print(json.dumps({"plugins": manifests, "count": len(manifests)}, ensure_ascii=False, indent=2))
+        return 0
+    if args.plugins_command == "inspect":
+        manifest = PluginManifest.from_dict(read_json(args.manifest))
+        print(json.dumps(manifest.to_dict(), ensure_ascii=False, indent=2))
         return 0
     return 2
 

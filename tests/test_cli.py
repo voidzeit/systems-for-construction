@@ -40,7 +40,7 @@ class ParserTests(unittest.TestCase):
         expected = {
             "verify", "inspect", "doctor", "support-bundle", "ifc-import", "pdf-import",
             "admit-evidence", "investigate", "bench", "report", "readiness", "serve",
-            "gateway", "vocabulary",
+            "gateway", "vocabulary", "project", "requirements", "work", "ai", "plugins",
         }
         self.assertEqual(set(actions[0].choices), expected)
 
@@ -200,6 +200,81 @@ class ReadOnlyCommandTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertTrue(bundle.is_file())
         self.assertIn("bundle.zip", stdout)
+
+
+class GroupedCommandTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.directory = TemporaryDirectory()
+        self.root = Path(self.directory.name)
+        self.addCleanup(self.directory.cleanup)
+
+    def test_grouped_project_inspect_matches_flat_command(self) -> None:
+        flat = run("inspect", str(EXAMPLE / "project-world.json"))
+        grouped = run("project", "inspect", str(EXAMPLE / "project-world.json"))
+        self.assertEqual(flat[0], 0)
+        self.assertEqual(grouped[0], 0)
+        self.assertEqual(json.loads(flat[1]), json.loads(grouped[1]))
+
+    def test_grouped_requirements_check_runs_existing_semantics(self) -> None:
+        output = self.root / "run.json"
+        code, stdout, _ = run(
+            "requirements", "check",
+            str(EXAMPLE / "requirement.json"),
+            str(EXAMPLE / "project-world.json"),
+            "--store", str(self.root / "store"),
+            "--output", str(output),
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(read_json(output)["determination"]["determination"], "NOT_MET")
+        self.assertIn("Published", stdout)
+
+    def test_work_inspect_normalizes_the_contract(self) -> None:
+        path = self.root / "work.json"
+        path.write_text(json.dumps({
+            "workUnitId": "WU-1",
+            "projectId": "P-1",
+            "workPackageId": "WP-1",
+            "capabilityId": "electrical.route.feeder",
+            "scope": "Route feeder",
+            "requirementIds": [],
+            "inputIds": [],
+            "dependencyIds": [],
+            "acceptanceCriteria": [],
+            "qaCriteria": [],
+            "evidenceIds": [],
+            "state": "created",
+        }), encoding="utf-8")
+        code, stdout, _ = run("work", "inspect", str(path))
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(stdout)["workUnitId"], "WU-1")
+
+    def test_plugins_list_and_inspect(self) -> None:
+        directory = self.root / "plugins"
+        directory.mkdir()
+        manifest = {
+            "pluginId": "sfc.reference.electrical",
+            "name": "Reference Electrical",
+            "version": "0.1.0",
+            "contractVersion": "1",
+            "family": "domain_pack",
+            "domain": "electrical",
+            "capabilities": [{
+                "capabilityId": "electrical.inspect",
+                "riskClass": "low",
+                "maximumAutonomy": "A1",
+            }],
+            "permissions": ["project.read"],
+            "sideEffects": [],
+            "autonomyCeiling": "A1",
+        }
+        path = directory / "electrical.json"
+        path.write_text(json.dumps(manifest), encoding="utf-8")
+        code, stdout, _ = run("plugins", "list", "--path", str(directory))
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(stdout)["count"], 1)
+        code, stdout, _ = run("plugins", "inspect", str(path))
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(stdout)["pluginId"], manifest["pluginId"])
 
 
 class EvidenceAndReportTests(unittest.TestCase):

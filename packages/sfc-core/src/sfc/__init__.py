@@ -56,6 +56,7 @@ from .readiness import ReadinessContribution, ReadinessReport, compute_readiness
 from .reality import RealityComparison, RealityObservation, compare_position
 from .activity import ActionTask, activity_feed, derive_tasks
 from .work import WorkUnit, WorkUnitStatus, WORK_UNIT_TRANSITIONS
+from .plugins import AutonomyLevel, PluginCapability, PluginFamily, PluginManifest, discover_plugin_manifests
 
 __all__ = [
     "__version__",
@@ -146,6 +147,11 @@ __all__ = [
     "WorkUnit",
     "WorkUnitStatus",
     "WORK_UNIT_TRANSITIONS",
+    "AutonomyLevel",
+    "PluginCapability",
+    "PluginFamily",
+    "PluginManifest",
+    "discover_plugin_manifests",
     "ValueRecord",
     "WorldElement",
     "current_review",
