@@ -26,6 +26,9 @@ EVENT_LABELS = {
     "obligation.transitioned": "Obligation advanced",
     "work_package.created": "Work package created",
     "work_package.transitioned": "Work package advanced",
+    "work_unit.created": "Work unit planned",
+    "work_unit.assigned": "Work unit assigned",
+    "work_unit.transitioned": "Work unit advanced",
     "review.added": "Review recorded",
     "value.created": "Value recorded",
     "value.transitioned": "Value advanced",
@@ -64,6 +67,10 @@ def derive_tasks(events: Iterable[dict[str, Any]]) -> list[ActionTask]:
             tasks.append(ActionTask(f"task-{event.get('eventId')}", "Classify obligation", target_id, "obligation_classification", source_event_id=event.get("eventId")))
         elif event_type == "work_package.created":
             tasks.append(ActionTask(f"task-{event.get('eventId')}", "Advance work package", target_id, "work_package", source_event_id=event.get("eventId")))
+        elif event_type == "work_unit.transitioned" and payload.get("to") == "human_review":
+            tasks.append(ActionTask(f"task-{event.get('eventId')}", "Review submitted work", target_id, "work_unit_review", source_event_id=event.get("eventId")))
+        elif event_type == "work_unit.transitioned" and payload.get("to") == "escalated":
+            tasks.append(ActionTask(f"task-{event.get('eventId')}", "Resolve escalated work", target_id, "work_unit_escalation", source_event_id=event.get("eventId")))
         elif event_type == "determination.produced" and payload.get("status") == "NOT_MET":
             tasks.append(ActionTask(f"task-{event.get('eventId')}", "Inspect determination counterexample", target_id, "counterexample_review", source_event_id=event.get("eventId")))
         elif event_type == "determination.produced" and payload.get("status") in {"UNKNOWN", "INCOMPLETE", "STALE"}:

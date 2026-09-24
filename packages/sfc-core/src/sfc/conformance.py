@@ -29,6 +29,8 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+from .work import work_unit_violations
+
 #: Coverage is published rounded, so it is compared at that precision.
 COVERAGE_TOLERANCE = 1e-6
 
@@ -55,6 +57,7 @@ def validate_semantics(kind: str, document: dict[str, Any]) -> None:
         "determination.schema.json": determination_violations,
         "proof.schema.json": proof_violations,
         "run.schema.json": run_violations,
+        "work-unit.schema.json": work_unit_violations,
     }
     if kind not in checks:
         raise ValueError(f"no semantic rules are defined for {kind!r}")

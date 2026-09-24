@@ -21,6 +21,7 @@ CONTROL_PLANE_EVENT_TYPES = frozenset({
     "work_package.created",
     "work_package.transitioned",
     "work_unit.created",
+    "work_unit.assigned",
     "work_unit.transitioned",
     "review.added",
     "value.created",

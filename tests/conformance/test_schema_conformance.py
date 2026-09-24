@@ -24,6 +24,7 @@ from sfc.models import Determination, Evidence, Obligation, ProjectWorld
 from sfc.conformance import validate_semantics
 from sfc.proofs import Proof
 from sfc.runtime import RunStore
+from sfc.work import WorkUnit, WorkUnitStatus
 
 from . import schemas
 
@@ -210,6 +211,47 @@ class ControlPlaneConformanceTests(unittest.TestCase):
 
         package = WorkPackage("WP-1", "Install boards", ("OBL-1",), WorkPackageStatus.PLANNED)
         schemas.assert_roundtrip(self, "work-package.schema.json", package, WorkPackage.from_dict)
+
+    def test_work_unit_conforms_in_every_reachable_state(self) -> None:
+        unit = WorkUnit(
+            "WU-1", "P-1", "WP-1", "electrical.route.feeder", "Route L03 feeders",
+            input_ids=("E-301",), estimated_effort_hours=12.0,
+        )
+        path = [
+            (WorkUnitStatus.READY, None),
+            (WorkUnitStatus.BLOCKED, "waiting on ASI-3"),
+            (WorkUnitStatus.READY, None),
+            ("assign", "router-1"),
+            (WorkUnitStatus.RUNNING, None),
+            (WorkUnitStatus.RETRY, None),
+            (WorkUnitStatus.RUNNING, None),
+            (WorkUnitStatus.MACHINE_QA, None),
+            (WorkUnitStatus.CORRECTION, None),
+            (WorkUnitStatus.READY, None),
+            (WorkUnitStatus.RUNNING, None),
+            (WorkUnitStatus.MACHINE_QA, None),
+            (WorkUnitStatus.ESCALATED, None),
+            (WorkUnitStatus.HUMAN_REVIEW, None),
+            (WorkUnitStatus.ACCEPTED, None),
+            (WorkUnitStatus.DELIVERED, None),
+            (WorkUnitStatus.LEARNED, None),
+            (WorkUnitStatus.CANCELLED, None),
+        ]
+        seen = {unit.state}
+        schemas.assert_roundtrip(self, "work-unit.schema.json", unit, WorkUnit.from_dict)
+        for target, argument in path:
+            if target is WorkUnitStatus.CANCELLED:
+                # Cancellation is terminal, so it is reached from a fresh unit.
+                unit = WorkUnit("WU-2", "P-1", "WP-1", "electrical.route.feeder", "Route L04 feeders").advance(target)
+            elif target == "assign":
+                unit = unit.assign(argument)
+            else:
+                unit = unit.advance(target, blocked_reason=argument)
+            seen.add(unit.state)
+            with self.subTest(state=unit.state.value):
+                schemas.assert_roundtrip(self, "work-unit.schema.json", unit, WorkUnit.from_dict)
+                validate_semantics("work-unit.schema.json", unit.to_dict())
+        self.assertEqual(seen, set(WorkUnitStatus))
 
     def test_every_emitted_event_conforms(self) -> None:
         with TemporaryDirectory() as directory:

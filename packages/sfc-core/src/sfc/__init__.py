@@ -55,7 +55,7 @@ from .evidence_room import DocumentState, DocumentVersion, EvidenceEnvelope, Evi
 from .readiness import ReadinessContribution, ReadinessReport, compute_readiness
 from .reality import RealityComparison, RealityObservation, compare_position
 from .activity import ActionTask, activity_feed, derive_tasks
-from .work import WorkUnit, WorkUnitStatus, WORK_UNIT_TRANSITIONS
+from .work import WorkUnit, WorkUnitError, WorkUnitStatus, WORK_UNIT_TRANSITIONS, work_unit_violations
 from .plugins import AutonomyLevel, PluginCapability, PluginFamily, PluginManifest, discover_plugin_manifests
 
 __all__ = [
@@ -145,8 +145,10 @@ __all__ = [
     "activity_feed",
     "derive_tasks",
     "WorkUnit",
+    "WorkUnitError",
     "WorkUnitStatus",
     "WORK_UNIT_TRANSITIONS",
+    "work_unit_violations",
     "AutonomyLevel",
     "PluginCapability",
     "PluginFamily",

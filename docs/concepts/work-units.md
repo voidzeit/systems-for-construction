@@ -22,3 +22,7 @@ RUNNING → MACHINE_QA → HUMAN_REVIEW
 ~~~
 
 The invariant is **orchestrate work, not agents**. Humans, deterministic code, AEC runtimes, models, solvers and hybrid workflows are replaceable executors.
+
+## Authority rules
+
+The lifecycle is governed, not just enumerated (ADR 0013): running work has an executor, every transition names its actor, a submission names its outputs, a unit is ready only when its dependencies are accepted, and whoever executed or submitted an attempt cannot accept it.
