@@ -78,6 +78,25 @@ Runs:
   `requirementId`, `population`, `coverage`, result, evidence, inspected
   evidence and witnesses. A proof that disagrees is a proof of something else.
 
+Work units (`work-unit.schema.json`, ADR 0011):
+
+- `capability` is a dotted identifier such as `electrical.route.feeder`.
+- `dependsOn` does not name the unit itself and does not repeat.
+- `estimatedEffort` is null or a non-negative time quantity. Null is "not
+  estimated", never zero.
+- An `assignee` is of a kind `executorPolicy.allowedKinds` allows.
+  `in_progress`, `submitted` and `accepted` require an assignee and
+  `attempt >= 1`.
+- `submitted` and `accepted` require unique `outputIds` and `submittedBy`.
+  Outside those states only `rejected` may carry outputs: the ones it refused.
+- `accepted` requires `acceptedBy`, and `acceptedBy != submittedBy`. No other
+  state records an acceptance.
+- `blocked`, `rejected` and `cancelled` require a `statusReason`.
+
+Graph rules need every unit and are enforced by the control plane: dependencies
+and the work package exist before the unit is planned, which keeps the graph
+acyclic, and a unit becomes `ready` only when every dependency is `accepted`.
+
 ## These schemas are executed, not just published
 
 `tests/conformance/` validates every artifact SFC produces against the schema
@@ -91,7 +110,7 @@ schema fixture -> python object -> JSON -> schema          (fixture direction)
 The suite covers the example obligations, a compiled obligation, determinations
 in every closing and non-closing state, the published run on disk and at the
 canonical pointer, proofs, admitted evidence with its measurement audit, reviews,
-values, work packages, and every event the reference control plane emits. It also
+values, work packages, work units in every reachable state, and every event the reference control plane emits. It also
 checks that each schema is a valid Draft 2020-12 document, declares an `$id`
 matching its filename, and that cross-file `$ref`s resolve.
 

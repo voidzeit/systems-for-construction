@@ -55,6 +55,20 @@ from .evidence_room import DocumentState, DocumentVersion, EvidenceEnvelope, Evi
 from .readiness import ReadinessContribution, ReadinessReport, compute_readiness
 from .reality import RealityComparison, RealityObservation, compare_position
 from .activity import ActionTask, activity_feed, derive_tasks
+from .work import (
+    AcceptanceCriterion,
+    Assignee,
+    AutonomyClass,
+    ExecutorKind,
+    ExecutorPolicy,
+    ExpectedOutput,
+    InputRef,
+    RiskClass,
+    WorkUnit,
+    WorkUnitError,
+    WorkUnitStatus,
+    work_unit_violations,
+)
 
 __all__ = [
     "__version__",
@@ -100,6 +114,18 @@ __all__ = [
     "determination_violations",
     "proof_violations",
     "run_violations",
+    "work_unit_violations",
+    "AcceptanceCriterion",
+    "Assignee",
+    "AutonomyClass",
+    "ExecutorKind",
+    "ExecutorPolicy",
+    "ExpectedOutput",
+    "InputRef",
+    "RiskClass",
+    "WorkUnit",
+    "WorkUnitError",
+    "WorkUnitStatus",
     "validate_semantics",
     "Review",
     "ReviewDecision",

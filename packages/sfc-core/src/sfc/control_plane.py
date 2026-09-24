@@ -23,7 +23,9 @@ from typing import Any, Iterable
 
 from .events import CONTROL_PLANE_EVENT_TYPES, Event, EventLog, ReplayError, owns_event
 from .governance import Review, ReviewDecision, ValueRecord, current_review
+from .conformance import work_unit_violations
 from .lifecycle import ObligationStatus, ValueStatus, WorkPackage, WorkPackageStatus, transition, OBLIGATION_TRANSITIONS
+from .work import ExecutorKind, WorkUnit, WorkUnitError, WorkUnitStatus
 
 __all__ = ["ControlPlane", "ReplayError"]
 
@@ -38,6 +40,7 @@ class ControlPlane:
     event_log: EventLog | None = None
     obligation_states: dict[str, ObligationStatus] = field(default_factory=dict)
     work_packages: dict[str, WorkPackage] = field(default_factory=dict)
+    work_units: dict[str, WorkUnit] = field(default_factory=dict)
     reviews: list[Review] = field(default_factory=list)
     values: dict[str, ValueRecord] = field(default_factory=dict)
     #: Events another projection owns. Recorded rather than dropped, so a log
@@ -72,6 +75,69 @@ class ControlPlane:
         self.work_packages[work_package_id] = updated
         self._emit("work_package.transitioned", work_package_id, {"from": package.status.value, "to": target.value}, actor_id)
         return updated
+
+    def add_work_unit(self, unit: WorkUnit) -> WorkUnit:
+        """Plan a work unit. Its dependencies must already be planned.
+
+        Requiring every dependency to exist at creation makes the work graph
+        acyclic by construction: a unit can only point at units recorded before
+        it, so no sequence of creations can close a loop.
+        """
+        if unit.work_unit_id in self.work_units:
+            raise WorkUnitError(f"work unit already exists: {unit.work_unit_id}")
+        if unit.status is not WorkUnitStatus.PLANNED or unit.attempt or unit.assignee or unit.output_ids:
+            raise WorkUnitError("a work unit enters the plane as planned, unassigned and without outputs")
+        if unit.work_package_id is not None and unit.work_package_id not in self.work_packages:
+            raise WorkUnitError(f"unknown work package: {unit.work_package_id}")
+        missing = [dependency for dependency in unit.depends_on if dependency not in self.work_units]
+        if missing:
+            raise WorkUnitError(f"{unit.work_unit_id} depends on unplanned work units: {', '.join(missing)}")
+        violations = tuple(work_unit_violations(unit.to_dict()))
+        if violations:
+            raise WorkUnitError("; ".join(violations))
+        self.work_units[unit.work_unit_id] = unit
+        self._emit("work_unit.created", unit.work_unit_id, unit.to_dict())
+        return unit
+
+    def assign_work_unit(self, work_unit_id: str, kind: ExecutorKind, executor_id: str, actor_id: str) -> WorkUnit:
+        unit = self.work_units[work_unit_id]
+        updated = unit.assign(kind, executor_id)
+        self.work_units[work_unit_id] = updated
+        self._emit("work_unit.assigned", work_unit_id, {"kind": kind.value, "executorId": executor_id}, actor_id)
+        return updated
+
+    def advance_work_unit(
+        self,
+        work_unit_id: str,
+        target: WorkUnitStatus,
+        actor_id: str,
+        *,
+        output_ids: tuple[str, ...] = (),
+        reason: str | None = None,
+    ) -> WorkUnit:
+        unit = self.work_units[work_unit_id]
+        if target is WorkUnitStatus.READY:
+            waiting = self.unaccepted_dependencies(work_unit_id)
+            if waiting:
+                raise WorkUnitError(f"{work_unit_id} is not ready: waiting on {', '.join(waiting)}")
+        updated = unit.advance(target, actor_id, output_ids=output_ids, reason=reason)
+        self.work_units[work_unit_id] = updated
+        payload: dict[str, Any] = {"from": unit.status.value, "to": target.value}
+        if output_ids:
+            payload["outputIds"] = list(output_ids)
+        if reason is not None:
+            payload["reason"] = reason
+        self._emit("work_unit.transitioned", work_unit_id, payload, actor_id)
+        return updated
+
+    def unaccepted_dependencies(self, work_unit_id: str) -> tuple[str, ...]:
+        """Dependencies that do not yet hold an accepted output."""
+        unit = self.work_units[work_unit_id]
+        return tuple(
+            dependency
+            for dependency in unit.depends_on
+            if self.work_units[dependency].status is not WorkUnitStatus.ACCEPTED
+        )
 
     def add_review(self, review: Review) -> Review:
         if review.decision is ReviewDecision.REVOKED and not review.supersedes_review_id:
@@ -139,6 +205,18 @@ class ControlPlane:
             self.add_work_package(WorkPackage.from_dict(payload))
         elif event_type == "work_package.transitioned":
             self.advance_work_package(aggregate_id, WorkPackageStatus(payload["to"]), actor_id or "")
+        elif event_type == "work_unit.created":
+            self.add_work_unit(WorkUnit.from_dict(payload))
+        elif event_type == "work_unit.assigned":
+            self.assign_work_unit(aggregate_id, ExecutorKind(payload["kind"]), payload["executorId"], actor_id or "")
+        elif event_type == "work_unit.transitioned":
+            self.advance_work_unit(
+                aggregate_id,
+                WorkUnitStatus(payload["to"]),
+                actor_id or "",
+                output_ids=tuple(payload.get("outputIds", [])),
+                reason=payload.get("reason"),
+            )
         elif event_type == "review.added":
             self.add_review(Review.from_dict(payload))
         elif event_type == "value.created":
@@ -160,6 +238,7 @@ class ControlPlane:
         return {
             "obligations": {key: value.value for key, value in sorted(self.obligation_states.items())},
             "workPackages": {key: value.to_dict() for key, value in sorted(self.work_packages.items())},
+            "workUnits": {key: value.to_dict() for key, value in sorted(self.work_units.items())},
             "reviews": [review.to_dict() for review in self.reviews],
             "values": {key: value.to_dict() for key, value in sorted(self.values.items())},
         }

@@ -52,6 +52,7 @@ KERNEL_MODULES = (
     "requirements.py",   # requirement text to an evaluable obligation
     "runtime.py",        # freeze, validate, publish
     "vocabulary.py",     # the injected domain terms
+    "work.py",           # work unit lifecycle and its separation of authority
 )
 
 

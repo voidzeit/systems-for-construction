@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://systemsforconstruction.org/spec/work-unit.schema.json",
+  "title": "SFC Work Unit",
+  "description": "The smallest piece of production work SFC governs: what must be produced, from which inputs, by which kind of executor, and how acceptance is decided. Cross-field invariants are in sfc.conformance; see ADR 0011.",
+  "type": "object",
+  "required": ["workUnitId", "title", "capability", "executorPolicy", "status", "attempt"],
+  "properties": {
+    "workUnitId": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "capability": {"type": "string", "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)+$"},
+    "workPackageId": {"type": ["string", "null"]},
+    "scope": {"type": ["string", "null"]},
+    "discipline": {"type": ["string", "null"]},
+    "location": {"type": ["string", "null"]},
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sourceId"],
+        "properties": {
+          "sourceId": {"type": "string", "minLength": 1},
+          "revision": {"type": ["string", "null"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "obligationIds": {"type": "array", "items": {"type": "string"}},
+    "dependsOn": {"type": "array", "items": {"type": "string"}},
+    "executorPolicy": {
+      "type": "object",
+      "required": ["allowedKinds", "autonomy"],
+      "properties": {
+        "allowedKinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/executorKind"}
+        },
+        "autonomy": {"enum": ["manual", "assisted", "supervised", "automated"]}
+      },
+      "additionalProperties": false
+    },
+    "expectedOutputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind"],
+        "properties": {
+          "kind": {"type": "string", "minLength": 1},
+          "description": {"type": ["string", "null"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "acceptanceCriteria": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["criterionId", "statement"],
+        "properties": {
+          "criterionId": {"type": "string", "minLength": 1},
+          "statement": {"type": "string", "minLength": 1},
+          "obligationId": {"type": ["string", "null"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "evidenceRequirements": {"type": "array", "items": {"type": "string"}},
+    "estimatedEffort": {
+      "description": "Null means not estimated; it is never read as zero.",
+      "type": ["object", "null"],
+      "required": ["value", "unit"],
+      "properties": {
+        "value": {"type": "number", "minimum": 0},
+        "unit": {"enum": ["s", "min", "h", "d"]}
+      },
+      "additionalProperties": false
+    },
+    "riskClass": {"enum": ["low", "medium", "high", null]},
+    "status": {"enum": ["planned", "ready", "in_progress", "blocked", "submitted", "accepted", "rejected", "cancelled"]},
+    "attempt": {"type": "integer", "minimum": 0},
+    "assignee": {
+      "type": ["object", "null"],
+      "required": ["kind", "executorId"],
+      "properties": {
+        "kind": {"$ref": "#/$defs/executorKind"},
+        "executorId": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "outputIds": {"type": "array", "items": {"type": "string"}},
+    "submittedBy": {"type": ["string", "null"]},
+    "acceptedBy": {"type": ["string", "null"]},
+    "statusReason": {"type": ["string", "null"]}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "executorKind": {"enum": ["human", "code", "solver", "llm", "revit", "external"]}
+  }
+}

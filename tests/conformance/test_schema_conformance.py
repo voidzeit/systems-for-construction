@@ -24,6 +24,8 @@ from sfc.models import Determination, Evidence, Obligation, ProjectWorld
 from sfc.conformance import validate_semantics
 from sfc.proofs import Proof
 from sfc.runtime import RunStore
+from sfc.work import ExecutorKind, ExecutorPolicy, InputRef, WorkUnit, WorkUnitStatus
+from sfc.quantities import Quantity
 
 from . import schemas
 
@@ -210,6 +212,30 @@ class ControlPlaneConformanceTests(unittest.TestCase):
 
         package = WorkPackage("WP-1", "Install boards", ("OBL-1",), WorkPackageStatus.PLANNED)
         schemas.assert_roundtrip(self, "work-package.schema.json", package, WorkPackage.from_dict)
+
+    def test_work_unit_conforms_in_every_reachable_state(self) -> None:
+        unit = WorkUnit(
+            "WU-1", "Route L03 feeders", "electrical.route.feeder",
+            inputs=(InputRef("E-301", "IFC"),),
+            executor_policy=ExecutorPolicy((ExecutorKind.HUMAN, ExecutorKind.SOLVER)),
+            estimated_effort=Quantity(12.0, "h"),
+        )
+        steps = [
+            lambda u: u,
+            lambda u: u.advance(WorkUnitStatus.READY, "lead-1"),
+            lambda u: u.assign(ExecutorKind.SOLVER, "router-1"),
+            lambda u: u.advance(WorkUnitStatus.IN_PROGRESS, "router-1"),
+            lambda u: u.advance(WorkUnitStatus.SUBMITTED, "router-1", output_ids=("OUT-1",)),
+            lambda u: u.advance(WorkUnitStatus.REJECTED, "reviewer-1", reason="clash"),
+            lambda u: u.advance(WorkUnitStatus.IN_PROGRESS, "router-1"),
+            lambda u: u.advance(WorkUnitStatus.SUBMITTED, "router-1", output_ids=("OUT-2",)),
+            lambda u: u.advance(WorkUnitStatus.ACCEPTED, "reviewer-1"),
+        ]
+        for step in steps:
+            unit = step(unit)
+            with self.subTest(status=unit.status.value, attempt=unit.attempt):
+                schemas.assert_roundtrip(self, "work-unit.schema.json", unit, WorkUnit.from_dict)
+                validate_semantics("work-unit.schema.json", unit.to_dict())
 
     def test_every_emitted_event_conforms(self) -> None:
         with TemporaryDirectory() as directory:
